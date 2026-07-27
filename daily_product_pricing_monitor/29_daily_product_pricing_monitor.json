@@ -218,17 +218,17 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "1axRTQelNLar_LC2m3Mul9wKJVHYhqEtie9lC4FR1w2c",
+          "value": "REPLACE_WITH_DOCUMENT_ID",
           "mode": "list",
           "cachedResultName": "Products",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1axRTQelNLar_LC2m3Mul9wKJVHYhqEtie9lC4FR1w2c/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_DOCUMENT_ID/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "Sheet1",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1axRTQelNLar_LC2m3Mul9wKJVHYhqEtie9lC4FR1w2c/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_DOCUMENT_ID/edit#gid=0"
         },
         "options": {}
       },

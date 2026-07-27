@@ -216,7 +216,7 @@
           ]
         },
         "operation": "update",
-        "documentURL": "1aOUl-mnCaI4__tULmBZSvWlOQhTHdD-RUPesP7_sFT4"
+        "documentURL": "REPLACE_WITH_DOCUMENT_ID"
       },
       "credentials": {
         "googleDocsOAuth2Api": {
@@ -259,14 +259,14 @@
           "__rl": true,
           "mode": "list",
           "value": 1476836405,
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ckP-ZgAMs2l2sFUpLAXx-gWNOQrHXoAs48Vo271X3rs/edit#gid=1476836405",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_SPREADSHEET_ID/edit#gid=1476836405",
           "cachedResultName": "GOOG"
         },
         "documentId": {
           "__rl": true,
           "mode": "list",
-          "value": "1ckP-ZgAMs2l2sFUpLAXx-gWNOQrHXoAs48Vo271X3rs",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ckP-ZgAMs2l2sFUpLAXx-gWNOQrHXoAs48Vo271X3rs/edit?usp=drivesdk",
+          "value": "REPLACE_WITH_SPREADSHEET_ID",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_SPREADSHEET_ID/edit?usp=drivesdk",
           "cachedResultName": "Watchlist"
         }
       },

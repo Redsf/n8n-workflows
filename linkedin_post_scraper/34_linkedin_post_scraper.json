@@ -198,17 +198,17 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "10ocrUuqvgTlTRqQaVL3uB-iTg01vsnwEhA901l2WJ7E",
+          "value": "REPLACE_WITH_DOCUMENT_ID",
           "mode": "list",
           "cachedResultName": "linkdedin post",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10ocrUuqvgTlTRqQaVL3uB-iTg01vsnwEhA901l2WJ7E/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_DOCUMENT_ID/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "Sheet1",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/10ocrUuqvgTlTRqQaVL3uB-iTg01vsnwEhA901l2WJ7E/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_DOCUMENT_ID/edit#gid=0"
         },
         "columns": {
           "mappingMode": "defineBelow",

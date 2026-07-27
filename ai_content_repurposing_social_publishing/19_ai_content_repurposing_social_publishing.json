@@ -154,10 +154,10 @@
         "operation": "appendOrUpdate",
         "documentId": {
           "__rl": true,
-          "value": "1CG98ZH-GqK0Fy-r7swB6AJwDAkWbonpg_J-VXgpTZgY",
+          "value": "REPLACE_WITH_DOCUMENT_ID",
           "mode": "list",
           "cachedResultName": "Gre tests",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1CG98ZH-GqK0Fy-r7swB6AJwDAkWbonpg_J-VXgpTZgY/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_DOCUMENT_ID/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
@@ -270,17 +270,17 @@
         "operation": "appendOrUpdate",
         "documentId": {
           "__rl": true,
-          "value": "1CG98ZH-GqK0Fy-r7swB6AJwDAkWbonpg_J-VXgpTZgY",
+          "value": "REPLACE_WITH_DOCUMENT_ID",
           "mode": "list",
           "cachedResultName": "Gre tests",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1CG98ZH-GqK0Fy-r7swB6AJwDAkWbonpg_J-VXgpTZgY/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_DOCUMENT_ID/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": "gid=0",
           "mode": "list",
           "cachedResultName": "Sheet1",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1CG98ZH-GqK0Fy-r7swB6AJwDAkWbonpg_J-VXgpTZgY/edit#gid=0"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_DOCUMENT_ID/edit#gid=0"
         },
         "columns": {
           "mappingMode": "defineBelow",

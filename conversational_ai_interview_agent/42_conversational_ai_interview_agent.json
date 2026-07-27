@@ -674,14 +674,14 @@
           "__rl": true,
           "mode": "list",
           "value": 1695693704,
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wKjVdm7HeufJkHrUJn_bW9bFI_blm0laoI_jgXKDe0Q/edit#gid=1695693704",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_SPREADSHEET_ID/edit#gid=1695693704",
           "cachedResultName": "transcripts"
         },
         "documentId": {
           "__rl": true,
           "mode": "list",
-          "value": "1wKjVdm7HeufJkHrUJn_bW9bFI_blm0laoI_jgXKDe0Q",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1wKjVdm7HeufJkHrUJn_bW9bFI_blm0laoI_jgXKDe0Q/edit?usp=drivesdk",
+          "value": "REPLACE_WITH_SPREADSHEET_ID",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_SPREADSHEET_ID/edit?usp=drivesdk",
           "cachedResultName": "AI Researcher with n8n Forms"
         }
       },

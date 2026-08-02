@@ -61,23 +61,27 @@ The vision call retries on a transient failure and has its own error output that
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Document Upload Webhook<br/><small>webhook</small>"]
-    N1["Normalize Input<br/><small>code</small>"]
-    N2["GPT Vision Extract<br/><small>httpRequest</small>"]
-    N3["Parse Extraction<br/><small>code</small>"]
-    N4["Validate Against Booking<br/><small>code</small>"]
-    N5["Auto Approve?<br/><small>if</small>"]
-    N6["Flag For Review<br/><small>slack</small>"]
-    N7["Build Error Verdict<br/><small>code</small>"]
-    N8["Record Result<br/><small>googleSheets</small>"]
-    N9["Respond<br/><small>respondToWebhook</small>"]
-    N10["Error Trigger<br/><small>errorTrigger</small>"]
-    N11["Alert Engineering<br/><small>slack</small>"]
+flowchart LR
+    subgraph G0 ["Document Upload Webhook / Respond"]
+        N0(["Document Upload Webhook<br/><small>webhook</small>"])
+        N1["Normalize Input<br/><small>code</small>"]
+        N2["GPT Vision Extract<br/><small>httpRequest</small>"]
+        N3["Parse Extraction<br/><small>code</small>"]
+        N4["Validate Against Booking<br/><small>code</small>"]
+        N5{{"Auto Approve?<br/><small>if</small>"}}
+        N6["Flag For Review<br/><small>slack</small>"]
+        N7["Build Error Verdict<br/><small>code</small>"]
+        N8["Record Result<br/><small>googleSheets</small>"]
+        N9(["Respond<br/><small>respondToWebhook</small>"])
+    end
+    subgraph G1 ["Error handling"]
+        N10(["Error Trigger<br/><small>errorTrigger</small>"])
+        N11["Alert Engineering<br/><small>slack</small>"]
+    end
     N0 --> N1
     N1 --> N2
-    N2 -->|0| N3
-    N2 -->|1| N7
+    N2 -->|success| N3
+    N2 -->|error| N7
     N3 --> N4
     N4 --> N5
     N5 -->|true| N8
@@ -86,5 +90,14 @@ flowchart TD
     N7 --> N8
     N8 --> N9
     N10 --> N11
+
+    class N0,N9 trigger
+    class N10 errorPath
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

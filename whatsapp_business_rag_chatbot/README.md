@@ -61,25 +61,31 @@ This workflow is driven by Meta's WhatsApp Cloud API webhook, not a request you'
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Respond to Webhook<br/><small>respondToWebhook</small>"]
-    N1["AI Agent<br/><small>agent</small>"]
-    N2["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
-    N3["When clicking ‘Test workflow’<br/><small>manualTrigger</small>"]
-    N4["Qdrant Vector Store<br/><small>vectorStoreQdrant</small>"]
-    N5["Create collection<br/><small>httpRequest</small>"]
-    N6["Refresh collection<br/><small>httpRequest</small>"]
-    N7["Get folder<br/><small>googleDrive</small>"]
-    N8["Download Files<br/><small>googleDrive</small>"]
-    N9["Embeddings OpenAI<br/><small>embeddingsOpenAi</small>"]
-    N10["Default Data Loader<br/><small>documentDefaultDataLoader</small>"]
-    N11["Token Splitter<br/><small>textSplitterTokenSplitter</small>"]
-    N12["Verify<br/><small>webhook</small>"]
-    N13["Respond<br/><small>webhook</small>"]
-    N14["is Message?<br/><small>if</small>"]
-    N15["Only message<br/><small>whatsApp</small>"]
-    N16["Send<br/><small>whatsApp</small>"]
-    N17["Window Buffer Memory<br/><small>memoryBufferWindow</small>"]
+flowchart LR
+    subgraph G0 ["Respond to Webhook / Verify"]
+        N0(["Respond to Webhook<br/><small>respondToWebhook</small>"])
+        N12(["Verify<br/><small>webhook</small>"])
+    end
+    subgraph G1 ["Respond"]
+        N1["AI Agent<br/><small>agent</small>"]
+        N2["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
+        N13(["Respond<br/><small>webhook</small>"])
+        N14{{"is Message?<br/><small>if</small>"}}
+        N15["Only message<br/><small>whatsApp</small>"]
+        N16["Send<br/><small>whatsApp</small>"]
+        N17["Window Buffer Memory<br/><small>memoryBufferWindow</small>"]
+    end
+    subgraph G2 ["When clicking ‘Test workflow’"]
+        N3(["When clicking ‘Test workflow’<br/><small>manualTrigger</small>"])
+        N4["Qdrant Vector Store<br/><small>vectorStoreQdrant</small>"]
+        N5["Create collection<br/><small>httpRequest</small>"]
+        N6["Refresh collection<br/><small>httpRequest</small>"]
+        N7["Get folder<br/><small>googleDrive</small>"]
+        N8["Download Files<br/><small>googleDrive</small>"]
+        N9["Embeddings OpenAI<br/><small>embeddingsOpenAi</small>"]
+        N10["Default Data Loader<br/><small>documentDefaultDataLoader</small>"]
+        N11["Token Splitter<br/><small>textSplitterTokenSplitter</small>"]
+    end
     N12 --> N0
     N13 --> N14
     N1 --> N16
@@ -87,13 +93,22 @@ flowchart TD
     N14 -->|true| N1
     N14 -->|false| N15
     N8 --> N4
+    N6 --> N7
+    N3 --> N5
+    N3 --> N6
     N11 -.textSplitter.-> N10
     N9 -.embedding.-> N4
     N2 -.languageModel.-> N1
-    N6 --> N7
     N10 -.document.-> N4
     N17 -.memory.-> N1
-    N3 --> N5
-    N3 --> N6
+
+    class N0,N3,N12,N13 trigger
+    class N2,N9,N10,N11,N17 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

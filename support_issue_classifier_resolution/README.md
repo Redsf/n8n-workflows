@@ -44,50 +44,48 @@ Adjust the `-7d` threshold or status list to match your own definition of "long-
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
-    N1["OpenAI Chat Model1<br/><small>lmChatOpenAi</small>"]
-    N2["OpenAI Chat Model3<br/><small>lmChatOpenAi</small>"]
-    N3["OpenAI Chat Model4<br/><small>lmChatOpenAi</small>"]
-    N4["Schedule Trigger<br/><small>scheduleTrigger</small>"]
-    N5["Get Issue Comments<br/><small>jira</small>"]
-    N6["Close Issue<br/><small>jira</small>"]
-    N7["Send Reminder<br/><small>jira</small>"]
-    N8["Join Comments<br/><small>aggregate</small>"]
-    N9["Add Autoclose Message<br/><small>jira</small>"]
-    N10["Ask For Feedback Message<br/><small>jira</small>"]
-    N11["Simplify Thread For AI<br/><small>set</small>"]
-    N12["Solution Found?<br/><small>if</small>"]
-    N13["Reply to Issue<br/><small>jira</small>"]
-    N14["Last Message is Not Bot<br/><small>if</small>"]
-    N15["Structured Output Parser<br/><small>outputParserStructured</small>"]
-    N16["Get Issue Metadata<br/><small>set</small>"]
-    N17["Notify Slack Channel<br/><small>slack</small>"]
-    N18["Close Issue2<br/><small>jira</small>"]
-    N19["Get List of Unresolved Long Lived Issues<br/><small>jira</small>"]
-    N20["Execute Workflow<br/><small>executeWorkflow</small>"]
-    N21["Execute Workflow Trigger<br/><small>executeWorkflowTrigger</small>"]
-    N22["Customer Satisfaction Agent<br/><small>sentimentAnalysis</small>"]
-    N23["KnowledgeBase Agent<br/><small>agent</small>"]
-    N24["Issue Reminder Agent<br/><small>chainLlm</small>"]
-    N25["Find Simlar Issues<br/><small>jiraTool</small>"]
-    N26["Query KnowledgeBase<br/><small>notionTool</small>"]
-    N27["Report Unhappy Resolution<br/><small>slack</small>"]
-    N28["Classify Current Issue State<br/><small>textClassifier</small>"]
+flowchart LR
+    subgraph G0 ["Execute Workflow Trigger"]
+        N0["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
+        N1["OpenAI Chat Model1<br/><small>lmChatOpenAi</small>"]
+        N2["OpenAI Chat Model3<br/><small>lmChatOpenAi</small>"]
+        N3["OpenAI Chat Model4<br/><small>lmChatOpenAi</small>"]
+        N5["Get Issue Comments<br/><small>jira</small>"]
+        N6["Close Issue<br/><small>jira</small>"]
+        N7["Send Reminder<br/><small>jira</small>"]
+        N8["Join Comments<br/><small>aggregate</small>"]
+        N9["Add Autoclose Message<br/><small>jira</small>"]
+        N10["Ask For Feedback Message<br/><small>jira</small>"]
+        N11["Simplify Thread For AI<br/><small>set</small>"]
+        N12{{"Solution Found?<br/><small>if</small>"}}
+        N13["Reply to Issue<br/><small>jira</small>"]
+        N14{{"Last Message is Not Bot<br/><small>if</small>"}}
+        N15["Structured Output Parser<br/><small>outputParserStructured</small>"]
+        N16["Get Issue Metadata<br/><small>set</small>"]
+        N17["Notify Slack Channel<br/><small>slack</small>"]
+        N18["Close Issue2<br/><small>jira</small>"]
+        N21(["Execute Workflow Trigger<br/><small>executeWorkflowTrigger</small>"])
+        N22{{"Customer Satisfaction Agent<br/><small>sentimentAnalysis</small>"}}
+        N23["KnowledgeBase Agent<br/><small>agent</small>"]
+        N24["Issue Reminder Agent<br/><small>chainLlm</small>"]
+        N25["Find Simlar Issues<br/><small>jiraTool</small>"]
+        N26["Query KnowledgeBase<br/><small>notionTool</small>"]
+        N27["Report Unhappy Resolution<br/><small>slack</small>"]
+        N28{{"Classify Current Issue State<br/><small>textClassifier</small>"}}
+    end
+    subgraph G1 ["Schedule Trigger"]
+        N4(["Schedule Trigger<br/><small>scheduleTrigger</small>"])
+        N19["Get List of Unresolved Long Lived Issues<br/><small>jira</small>"]
+        N20["Execute Workflow<br/><small>executeWorkflow</small>"]
+    end
     N8 --> N11
     N13 --> N18
     N12 -->|true| N13
     N12 -->|false| N17
     N4 --> N19
-    N0 -.languageModel.-> N28
-    N25 -.tool.-> N23
     N5 --> N8
     N16 --> N5
-    N1 -.languageModel.-> N23
-    N2 -.languageModel.-> N24
-    N3 -.languageModel.-> N22
     N23 --> N12
-    N26 -.tool.-> N23
     N24 --> N7
     N17 --> N13
     N9 --> N6
@@ -95,13 +93,28 @@ flowchart TD
     N14 --> N24
     N10 --> N6
     N21 --> N16
-    N15 -.outputParser.-> N23
-    N22 -->|0| N10
-    N22 -->|1| N9
-    N22 -->|2| N27
-    N28 -->|0| N22
-    N28 -->|1| N14
-    N28 -->|2| N23
+    N22 -->|Positive| N10
+    N22 -->|Neutral| N9
+    N22 -->|Negative| N27
+    N28 -->|resolved| N22
+    N28 -->|pending more information| N14
+    N28 -->|still waiting| N23
     N19 --> N20
+    N0 -.languageModel.-> N28
+    N25 -.tool.-> N23
+    N1 -.languageModel.-> N23
+    N2 -.languageModel.-> N24
+    N3 -.languageModel.-> N22
+    N26 -.tool.-> N23
+    N15 -.outputParser.-> N23
+
+    class N4,N21 trigger
+    class N0,N1,N2,N3,N15,N25,N26 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

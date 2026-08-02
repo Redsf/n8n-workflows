@@ -42,27 +42,31 @@ Built for anyone managing a busy business inbox who wants triage rules to live i
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["When clicking ‘Test workflow’<br/><small>manualTrigger</small>"]
-    N1["Microsoft Outlook23<br/><small>microsoftOutlook</small>"]
-    N2["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
-    N3["Set Category<br/><small>microsoftOutlook</small>"]
-    N4["Structured Output Parser<br/><small>outputParserStructured</small>"]
-    N5["If<br/><small>if</small>"]
-    N6["Set Importance<br/><small>microsoftOutlook</small>"]
-    N7["AI: Analyse Email<br/><small>agent</small>"]
-    N8["Check Mail Schedule Trigger<br/><small>scheduleTrigger</small>"]
-    N9["Update Contacts Schedule Trigger<br/><small>scheduleTrigger</small>"]
-    N10["Monday.com - Get Contacts<br/><small>mondayCom</small>"]
-    N11["Airtable - Contacts<br/><small>airtable</small>"]
-    N12["Convert to Markdown<br/><small>markdown</small>"]
-    N13["Email Messages<br/><small>set</small>"]
-    N14["Rules<br/><small>airtable</small>"]
-    N15["Categories<br/><small>airtable</small>"]
-    N16["Delete Rules<br/><small>airtable</small>"]
-    N17["Contact<br/><small>airtable</small>"]
-    N18["Loop Over Items<br/><small>splitInBatches</small>"]
-    N19["Merge<br/><small>merge</small>"]
+flowchart LR
+    subgraph G0 ["When clicking ‘Test workflow’ / Check Mail Schedule Trigger"]
+        N0(["When clicking ‘Test workflow’<br/><small>manualTrigger</small>"])
+        N1["Microsoft Outlook23<br/><small>microsoftOutlook</small>"]
+        N2["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
+        N3["Set Category<br/><small>microsoftOutlook</small>"]
+        N4["Structured Output Parser<br/><small>outputParserStructured</small>"]
+        N5{{"If<br/><small>if</small>"}}
+        N6["Set Importance<br/><small>microsoftOutlook</small>"]
+        N7["AI: Analyse Email<br/><small>agent</small>"]
+        N8(["Check Mail Schedule Trigger<br/><small>scheduleTrigger</small>"])
+        N12["Convert to Markdown<br/><small>markdown</small>"]
+        N13["Email Messages<br/><small>set</small>"]
+        N14["Rules<br/><small>airtable</small>"]
+        N15["Categories<br/><small>airtable</small>"]
+        N16["Delete Rules<br/><small>airtable</small>"]
+        N17["Contact<br/><small>airtable</small>"]
+        N18["Loop Over Items<br/><small>splitInBatches</small>"]
+        N19["Merge<br/><small>merge</small>"]
+    end
+    subgraph G1 ["Update Contacts Schedule Trigger"]
+        N9(["Update Contacts Schedule Trigger<br/><small>scheduleTrigger</small>"])
+        N10["Monday.com - Get Contacts<br/><small>mondayCom</small>"]
+        N11["Airtable - Contacts<br/><small>airtable</small>"]
+    end
     N5 -->|true| N6
     N5 -->|false| N18
     N19 --> N7
@@ -73,12 +77,10 @@ flowchart TD
     N3 --> N5
     N13 --> N18
     N6 --> N18
-    N18 --> N17
+    N18 -->|loop| N17
     N7 --> N3
-    N2 -.languageModel.-> N7
     N12 --> N13
     N1 --> N12
-    N4 -.outputParser.-> N7
     N10 --> N11
     N8 --> N1
     N9 --> N10
@@ -86,5 +88,17 @@ flowchart TD
     N0 --> N14
     N0 --> N15
     N0 --> N16
+    N2 -.languageModel.-> N7
+    N4 -.outputParser.-> N7
+
+    class N0,N9 trigger
+    class N8 disabled
+    class N2,N4 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

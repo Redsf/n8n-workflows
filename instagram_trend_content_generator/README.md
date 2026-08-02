@@ -57,13 +57,13 @@ Built for social media teams who want to keep a themed Instagram account (in thi
 
 ```mermaid
 flowchart TD
-    N0["If media status is finished<br/><small>if</small>"]
-    N1["If media status is finished1<br/><small>if</small>"]
+    N0{{"If media status is finished<br/><small>if</small>"}}
+    N1{{"If media status is finished1<br/><small>if</small>"}}
     N2["Telegram<br/><small>telegram</small>"]
     N3["Telegram1<br/><small>telegram</small>"]
     N4["Telegram2<br/><small>telegram</small>"]
     N5["Loop Over Items<br/><small>splitInBatches</small>"]
-    N6["Schedule Trigger1<br/><small>scheduleTrigger</small>"]
+    N6(["Schedule Trigger1<br/><small>scheduleTrigger</small>"])
     N7["Telegram Params<br/><small>set</small>"]
     N8["Instagram params<br/><small>set</small>"]
     N9["Rapid Api params<br/><small>set</small>"]
@@ -72,7 +72,7 @@ flowchart TD
     N12["get top trends on instagram #isometric<br/><small>httpRequest</small>"]
     N13["merge the array content<br/><small>merge</small>"]
     N14["Check Data on Database Is Exist<br/><small>postgres</small>"]
-    N15["If Data is Exist<br/><small>if</small>"]
+    N15{{"If Data is Exist<br/><small>if</small>"}}
     N16["send error message to telegram<br/><small>telegram</small>"]
     N17["insert data on db<br/><small>postgres</small>"]
     N18["Analyze Image and give the content<br/><small>openAi</small>"]
@@ -84,7 +84,7 @@ flowchart TD
     N24["filter the image content-2<br/><small>code</small>"]
     N25["Replicate params<br/><small>set</small>"]
     N26["Generate image on flux<br/><small>httpRequest</small>"]
-    N5 --> N14
+    N5 -->|loop| N14
     N7 --> N9
     N15 -->|true| N5
     N15 -->|false| N17
@@ -105,12 +105,20 @@ flowchart TD
     N0 -->|false| N2
     N1 -->|true| N3
     N1 -->|false| N4
-    N14 -->|0| N15
-    N14 -->|1| N16
+    N14 -->|success| N15
+    N14 -->|error| N16
     N18 --> N19
     N21 --> N0
     N12 --> N10
     N11 --> N24
     N19 --> N26
+
+    class N6 trigger
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

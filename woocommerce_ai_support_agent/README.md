@@ -55,40 +55,50 @@ Has my last order shipped yet?
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["No email provided<br/><small>set</small>"]
-    N1["If email provided<br/><small>if</small>"]
-    N2["If user found<br/><small>if</small>"]
-    N3["No customer found<br/><small>set</small>"]
-    N4["If contains DHL data<br/><small>if</small>"]
-    N5["Extract Tracking Data<br/><small>set</small>"]
-    N6["Merge Orders<br/><small>merge</small>"]
-    N7["Merge Order and Tracking Data<br/><small>merge</small>"]
-    N8["Split Out<br/><small>splitOut</small>"]
-    N9["Aggregate<br/><small>aggregate</small>"]
-    N10["Merge Tracking Data<br/><small>merge</small>"]
-    N11["Window Buffer Memory<br/><small>memoryBufferWindow</small>"]
-    N12["Execute Workflow Trigger<br/><small>executeWorkflowTrigger</small>"]
-    N13["WooCommerce - Get User<br/><small>wooCommerce</small>"]
-    N14["If order found<br/><small>if</small>"]
-    N15["WooCommerce Get Orders<br/><small>httpRequest</small>"]
-    N16["No order found<br/><small>set</small>"]
-    N17["Add Error Information<br/><small>set</small>"]
-    N18["DHL<br/><small>dhl</small>"]
-    N19["Send Response<br/><small>set</small>"]
-    N20["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
-    N21["WooCommerce_Tool<br/><small>toolWorkflow</small>"]
-    N22["Chat Trigger<br/><small>chatTrigger</small>"]
-    N23["Respond to Webhook<br/><small>respondToWebhook</small>"]
-    N24["Webhook Example Page<br/><small>webhook</small>"]
-    N25["Decrypt email<br/><small>code</small>"]
-    N26["Encrypt email<br/><small>code</small>"]
-    N27["Example encrypted email<br/><small>set</small>"]
-    N28["Decrypt email address<br/><small>code</small>"]
-    N29["AI Agent<br/><small>agent</small>"]
-    N30["Mock Data<br/><small>set</small>"]
-    N18 -->|0| N10
-    N18 -->|1| N17
+flowchart LR
+    subgraph G0 ["Execute Workflow Trigger"]
+        N0["No email provided<br/><small>set</small>"]
+        N1{{"If email provided<br/><small>if</small>"}}
+        N2{{"If user found<br/><small>if</small>"}}
+        N3["No customer found<br/><small>set</small>"]
+        N4{{"If contains DHL data<br/><small>if</small>"}}
+        N5["Extract Tracking Data<br/><small>set</small>"]
+        N6["Merge Orders<br/><small>merge</small>"]
+        N7["Merge Order and Tracking Data<br/><small>merge</small>"]
+        N8["Split Out<br/><small>splitOut</small>"]
+        N9["Aggregate<br/><small>aggregate</small>"]
+        N10["Merge Tracking Data<br/><small>merge</small>"]
+        N12(["Execute Workflow Trigger<br/><small>executeWorkflowTrigger</small>"])
+        N13["WooCommerce - Get User<br/><small>wooCommerce</small>"]
+        N14{{"If order found<br/><small>if</small>"}}
+        N15["WooCommerce Get Orders<br/><small>httpRequest</small>"]
+        N16["No order found<br/><small>set</small>"]
+        N17["Add Error Information<br/><small>set</small>"]
+        N18["DHL<br/><small>dhl</small>"]
+        N19["Send Response<br/><small>set</small>"]
+    end
+    subgraph G1 ["Chat Trigger"]
+        N11["Window Buffer Memory<br/><small>memoryBufferWindow</small>"]
+        N20["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
+        N21["WooCommerce_Tool<br/><small>toolWorkflow</small>"]
+        N22(["Chat Trigger<br/><small>chatTrigger</small>"])
+        N28["Decrypt email address<br/><small>code</small>"]
+        N29["AI Agent<br/><small>agent</small>"]
+        N30["Mock Data<br/><small>set</small>"]
+    end
+    subgraph G2 ["Respond to Webhook / Webhook Example Page"]
+        N23(["Respond to Webhook<br/><small>respondToWebhook</small>"])
+        N24(["Webhook Example Page<br/><small>webhook</small>"])
+    end
+    subgraph G3 ["Unwired fragment"]
+        N25["Decrypt email<br/><small>code</small>"]
+        N27["Example encrypted email<br/><small>set</small>"]
+    end
+    subgraph G4 ["Unwired node"]
+        N26["Encrypt email<br/><small>code</small>"]
+    end
+    N18 -->|success| N10
+    N18 -->|error| N17
     N9 --> N6
     N30 --> N29
     N8 --> N18
@@ -99,15 +109,12 @@ flowchart TD
     N14 -->|true| N5
     N14 -->|true| N7
     N14 -->|false| N16
-    N21 -.tool.-> N29
     N1 -->|true| N13
     N1 -->|false| N0
-    N20 -.languageModel.-> N29
     N10 --> N9
     N4 -->|true| N8
     N4 -->|false| N6
     N24 --> N23
-    N11 -.memory.-> N29
     N17 --> N10
     N28 --> N30
     N5 --> N4
@@ -116,5 +123,18 @@ flowchart TD
     N27 --> N25
     N12 --> N1
     N7 --> N19
+    N21 -.tool.-> N29
+    N20 -.languageModel.-> N29
+    N11 -.memory.-> N29
+
+    class N12,N22,N23,N24 trigger
+    class N28 disabled
+    class N11,N20,N21 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

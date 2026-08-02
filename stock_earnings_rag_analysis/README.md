@@ -50,35 +50,48 @@ To run it against a different company, populate the watchlist sheet with that co
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Pinecone Vector Store<br/><small>vectorStorePinecone</small>"]
-    N1["Embeddings Google Gemini<br/><small>embeddingsGoogleGemini</small>"]
-    N2["Default Data Loader<br/><small>documentDefaultDataLoader</small>"]
-    N3["Recursive Character Text Splitter<br/><small>textSplitterRecursiveCharacterTextSplitter</small>"]
-    N4["Loop Over Items<br/><small>splitInBatches</small>"]
-    N5["When clicking ‘Test workflow’<br/><small>manualTrigger</small>"]
-    N6["AI Agent<br/><small>agent</small>"]
-    N7["Vector Store Tool<br/><small>toolVectorStore</small>"]
-    N8["Google Gemini Chat Model1<br/><small>lmChatGoogleGemini</small>"]
-    N9["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
-    N10["Pinecone Vector Store (Retrieval)<br/><small>vectorStorePinecone</small>"]
-    N11["Save Report to Google Docs<br/><small>googleDocs</small>"]
-    N12["Embeddings Google Gemini (retrieval)<br/><small>embeddingsGoogleGemini</small>"]
-    N13["List Of Files To Load (Google Sheets)<br/><small>googleSheets</small>"]
-    N14["Download File From Google Drive<br/><small>googleDrive</small>"]
+flowchart LR
+    subgraph G0 ["Unwired fragment"]
+        N0["Pinecone Vector Store<br/><small>vectorStorePinecone</small>"]
+        N1["Embeddings Google Gemini<br/><small>embeddingsGoogleGemini</small>"]
+        N2["Default Data Loader<br/><small>documentDefaultDataLoader</small>"]
+        N3["Recursive Character Text Splitter<br/><small>textSplitterRecursiveCharacterTextSplitter</small>"]
+        N4["Loop Over Items<br/><small>splitInBatches</small>"]
+        N13["List Of Files To Load (Google Sheets)<br/><small>googleSheets</small>"]
+        N14["Download File From Google Drive<br/><small>googleDrive</small>"]
+    end
+    subgraph G1 ["When clicking ‘Test workflow’"]
+        N5(["When clicking ‘Test workflow’<br/><small>manualTrigger</small>"])
+        N6["AI Agent<br/><small>agent</small>"]
+        N7["Vector Store Tool<br/><small>toolVectorStore</small>"]
+        N8["Google Gemini Chat Model1<br/><small>lmChatGoogleGemini</small>"]
+        N9["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
+        N10["Pinecone Vector Store (Retrieval)<br/><small>vectorStorePinecone</small>"]
+        N11["Save Report to Google Docs<br/><small>googleDocs</small>"]
+        N12["Embeddings Google Gemini (retrieval)<br/><small>embeddingsGoogleGemini</small>"]
+    end
     N6 --> N11
-    N4 --> N14
+    N4 -->|loop| N14
+    N0 --> N4
+    N14 --> N0
+    N5 --> N6
+    N13 --> N4
     N9 -.languageModel.-> N6
     N7 -.tool.-> N6
     N2 -.document.-> N0
-    N0 --> N4
     N1 -.embedding.-> N0
     N8 -.languageModel.-> N7
-    N14 --> N0
     N10 -.vectorStore.-> N7
     N3 -.textSplitter.-> N2
-    N5 --> N6
     N12 -.embedding.-> N10
-    N13 --> N4
+
+    class N5 trigger
+    class N1,N2,N3,N7,N8,N9,N10,N12 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

@@ -51,8 +51,8 @@ Note: any external form (e.g., Contact Form 7 on WordPress) can feed this same w
 
 ```mermaid
 flowchart TD
-    N0["On form submission<br/><small>formTrigger</small>"]
-    N1["Text Classifier<br/><small>textClassifier</small>"]
+    N0(["On form submission<br/><small>formTrigger</small>"])
+    N1{{"Text Classifier<br/><small>textClassifier</small>"}}
     N2["OpenAI<br/><small>lmChatOpenAi</small>"]
     N3["Prod. Dep.<br/><small>emailSend</small>"]
     N4["Quote Dep.<br/><small>emailSend</small>"]
@@ -64,17 +64,26 @@ flowchart TD
     N10["General DB<br/><small>googleSheets</small>"]
     N11["Order DB<br/><small>googleSheets</small>"]
     N12["Other DB<br/><small>googleSheets</small>"]
-    N2 -.languageModel.-> N1
     N5 --> N10
     N6 --> N11
     N7 --> N12
     N3 --> N9
     N4 --> N8
-    N1 -->|0| N4
-    N1 -->|0| N3
-    N1 -->|2| N5
-    N1 -->|3| N6
-    N1 -->|4| N7
+    N1 -->|Request Quote| N4
+    N1 -->|Request Quote| N3
+    N1 -->|General problem| N5
+    N1 -->|Order| N6
+    N1 -->|other| N7
     N0 --> N1
+    N2 -.languageModel.-> N1
+
+    class N0 trigger
+    class N2 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

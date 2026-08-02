@@ -59,32 +59,48 @@ Buffer API calls retry up to three times before failing, and Drive-adjacent Shee
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Content Submitted<br/><small>webhook</small>"]
-    N1["Generate Platform Variants (AI Agent)<br/><small>agent</small>"]
-    N2["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
-    N3["Structured Output Parser<br/><small>outputParserStructured</small>"]
-    N4["Build Scheduling Queue<br/><small>code</small>"]
-    N5["Schedule Each Post<br/><small>splitInBatches</small>"]
-    N6["Scheduling Done<br/><small>noOp</small>"]
-    N7["Schedule to Buffer<br/><small>httpRequest</small>"]
-    N8["Log Scheduled Post<br/><small>googleSheets</small>"]
-    N9["Weekly Performance Pull<br/><small>scheduleTrigger</small>"]
-    N10["Fetch Buffer Analytics<br/><small>httpRequest</small>"]
-    N11["Log Weekly Performance<br/><small>googleSheets</small>"]
-    N12["Error Trigger<br/><small>errorTrigger</small>"]
-    N13["Notify Ops<br/><small>slack</small>"]
+flowchart LR
+    subgraph G0 ["Content Submitted"]
+        N0(["Content Submitted<br/><small>webhook</small>"])
+        N1["Generate Platform Variants (AI Agent)<br/><small>agent</small>"]
+        N2["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
+        N3["Structured Output Parser<br/><small>outputParserStructured</small>"]
+        N4["Build Scheduling Queue<br/><small>code</small>"]
+        N5["Schedule Each Post<br/><small>splitInBatches</small>"]
+        N6["Scheduling Done<br/><small>noOp</small>"]
+        N7["Schedule to Buffer<br/><small>httpRequest</small>"]
+        N8["Log Scheduled Post<br/><small>googleSheets</small>"]
+    end
+    subgraph G1 ["Weekly Performance Pull"]
+        N9(["Weekly Performance Pull<br/><small>scheduleTrigger</small>"])
+        N10["Fetch Buffer Analytics<br/><small>httpRequest</small>"]
+        N11["Log Weekly Performance<br/><small>googleSheets</small>"]
+    end
+    subgraph G2 ["Error handling"]
+        N12(["Error Trigger<br/><small>errorTrigger</small>"])
+        N13["Notify Ops<br/><small>slack</small>"]
+    end
     N0 --> N1
-    N2 -.languageModel.-> N1
-    N3 -.outputParser.-> N1
     N1 --> N4
     N4 --> N5
-    N5 -->|0| N6
-    N5 -->|1| N7
+    N5 -->|done| N6
+    N5 -->|loop| N7
     N7 --> N8
     N8 --> N5
     N9 --> N10
     N10 --> N11
     N12 --> N13
+    N2 -.languageModel.-> N1
+    N3 -.outputParser.-> N1
+
+    class N0,N9 trigger
+    class N12 errorPath
+    class N2,N3 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

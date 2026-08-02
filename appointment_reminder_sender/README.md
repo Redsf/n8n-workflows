@@ -34,7 +34,7 @@ Not applicable — this workflow runs on a daily schedule (9am) and reads from a
 
 ```mermaid
 flowchart TD
-    N0["Every Morning at 9<br/><small>scheduleTrigger</small>"]
+    N0(["Every Morning at 9<br/><small>scheduleTrigger</small>"])
     N1["Get Appointments<br/><small>googleSheets</small>"]
     N2["Filter For Tomorrow<br/><small>code</small>"]
     N3["Send Reminder Email<br/><small>gmail</small>"]
@@ -45,5 +45,13 @@ flowchart TD
     N0 --> N1
     N2 --> N3
     N2 --> N4
+
+    class N0 trigger
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

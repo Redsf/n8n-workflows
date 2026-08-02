@@ -39,36 +39,37 @@ Built for anyone who runs recurring Zoom calls and wants minutes, tasks, and nex
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
-    N1["When clicking ‘Test workflow’<br/><small>manualTrigger</small>"]
-    N2["No Recording/Transcript available<br/><small>stopAndError</small>"]
-    N3["Zoom: Get data of last meeting<br/><small>zoom</small>"]
-    N4["Filter transcript URL<br/><small>set</small>"]
-    N5["Filter: Only 1 item<br/><small>splitInBatches</small>"]
-    N6["Zoom: Get transcript file<br/><small>httpRequest</small>"]
-    N7["Extract text from transcript file<br/><small>extractFromFile</small>"]
-    N8["Format transcript text<br/><small>set</small>"]
-    N9["Zoom: Get participants data<br/><small>httpRequest</small>"]
-    N10["Create meeting summary<br/><small>openAi</small>"]
-    N11["Sort for mail delivery<br/><small>set</small>"]
-    N12["Format to html<br/><small>code</small>"]
-    N13["Send meeting summary<br/><small>emailSend</small>"]
-    N14["Create tasks<br/><small>toolWorkflow</small>"]
-    N15["Create tasks and follow-up call<br/><small>agent</small>"]
-    N16["Create follow-up call<br/><small>microsoftOutlookTool</small>"]
-    N17["Filter: Last 24 hours<br/><small>filter</small>"]
-    N18["Execute Workflow Trigger<br/><small>executeWorkflowTrigger</small>"]
-    N19["Split Out<br/><small>splitOut</small>"]
-    N20["ClickUp<br/><small>clickUp</small>"]
-    N21["Zoom: Get transcripts data<br/><small>httpRequest</small>"]
+flowchart LR
+    subgraph G0 ["When clicking ‘Test workflow’"]
+        N0["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
+        N1(["When clicking ‘Test workflow’<br/><small>manualTrigger</small>"])
+        N2["No Recording/Transcript available<br/><small>stopAndError</small>"]
+        N3["Zoom: Get data of last meeting<br/><small>zoom</small>"]
+        N4["Filter transcript URL<br/><small>set</small>"]
+        N5["Filter: Only 1 item<br/><small>splitInBatches</small>"]
+        N6["Zoom: Get transcript file<br/><small>httpRequest</small>"]
+        N7["Extract text from transcript file<br/><small>extractFromFile</small>"]
+        N8["Format transcript text<br/><small>set</small>"]
+        N9["Zoom: Get participants data<br/><small>httpRequest</small>"]
+        N10["Create meeting summary<br/><small>openAi</small>"]
+        N11["Sort for mail delivery<br/><small>set</small>"]
+        N12["Format to html<br/><small>code</small>"]
+        N13["Send meeting summary<br/><small>emailSend</small>"]
+        N14["Create tasks<br/><small>toolWorkflow</small>"]
+        N15["Create tasks and follow-up call<br/><small>agent</small>"]
+        N16["Create follow-up call<br/><small>microsoftOutlookTool</small>"]
+        N17{{"Filter: Last 24 hours<br/><small>filter</small>"}}
+        N21["Zoom: Get transcripts data<br/><small>httpRequest</small>"]
+    end
+    subgraph G1 ["Execute Workflow Trigger"]
+        N18(["Execute Workflow Trigger<br/><small>executeWorkflowTrigger</small>"])
+        N19["Split Out<br/><small>splitOut</small>"]
+        N20["ClickUp<br/><small>clickUp</small>"]
+    end
     N19 --> N20
-    N14 -.tool.-> N15
     N12 --> N13
-    N0 -.languageModel.-> N15
-    N5 -->|0| N5
-    N5 -->|1| N6
-    N16 -.tool.-> N15
+    N5 -->|done| N5
+    N5 -->|loop| N6
     N4 --> N5
     N17 --> N21
     N10 --> N11
@@ -77,11 +78,24 @@ flowchart TD
     N11 --> N12
     N18 --> N19
     N6 --> N7
-    N21 -->|0| N4
-    N21 -->|1| N2
+    N21 -->|success| N4
+    N21 -->|error| N2
     N9 --> N10
     N3 --> N17
     N7 --> N8
     N1 --> N3
+    N14 -.tool.-> N15
+    N0 -.languageModel.-> N15
+    N16 -.tool.-> N15
+
+    class N1 trigger
+    class N18 disabled
+    class N0,N14,N16 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

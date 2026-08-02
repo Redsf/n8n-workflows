@@ -46,13 +46,13 @@ Send a POST to the webhook with a body like this:
 
 ```mermaid
 flowchart TD
-    N0["New Order Received<br/><small>webhook</small>"]
+    N0(["New Order Received<br/><small>webhook</small>"])
     N1["Format Order Data<br/><small>set</small>"]
     N2["Log Order to Sheet<br/><small>googleSheets</small>"]
-    N3["Is High Value Order<br/><small>if</small>"]
+    N3{{"Is High Value Order<br/><small>if</small>"}}
     N4["Notify VIP Channel<br/><small>slack</small>"]
     N5["Notify Orders Channel<br/><small>slack</small>"]
-    N6["Respond to Store<br/><small>respondToWebhook</small>"]
+    N6(["Respond to Store<br/><small>respondToWebhook</small>"])
     N1 --> N2
     N2 --> N3
     N0 --> N1
@@ -60,5 +60,13 @@ flowchart TD
     N3 -->|true| N4
     N3 -->|false| N5
     N5 --> N6
+
+    class N0,N6 trigger
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

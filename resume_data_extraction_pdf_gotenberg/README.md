@@ -76,10 +76,10 @@ flowchart TD
     N5["Convert employment history to HTML<br/><small>code</small>"]
     N6["Convert projects to HTML<br/><small>code</small>"]
     N7["Convert volunteering to HTML<br/><small>code</small>"]
-    N8["Telegram trigger<br/><small>telegramTrigger</small>"]
-    N9["Auth<br/><small>if</small>"]
+    N8(["Telegram trigger<br/><small>telegramTrigger</small>"])
+    N9{{"Auth<br/><small>if</small>"}}
     N10["No operation (unauthorized)<br/><small>noOp</small>"]
-    N11["Check if start message<br/><small>if</small>"]
+    N11{{"Check if start message<br/><small>if</small>"}}
     N12["No operation (start message)<br/><small>noOp</small>"]
     N13["Get file<br/><small>telegram</small>"]
     N14["Extract text from PDF<br/><small>extractFromFile</small>"]
@@ -114,7 +114,6 @@ flowchart TD
     N28 --> N29
     N32 --> N25
     N8 --> N9
-    N0 -.languageModel.-> N31
     N31 --> N15
     N15 --> N5
     N15 --> N1
@@ -123,20 +122,30 @@ flowchart TD
     N15 --> N7
     N15 --> N17
     N18 --> N22
-    N3 -.languageModel.-> N2
     N27 --> N28
     N14 --> N31
     N11 -->|true| N13
     N11 -->|false| N12
     N29 --> N30
     N6 --> N20
-    N4 -.outputParser.-> N2
-    N2 -.outputParser.-> N31
     N1 --> N19
     N7 --> N21
     N23 --> N32
     N5 --> N18
     N24 --> N25
     N22 --> N32
+    N0 -.languageModel.-> N31
+    N3 -.languageModel.-> N2
+    N4 -.outputParser.-> N2
+    N2 -.outputParser.-> N31
+
+    class N8 trigger
+    class N0,N2,N3,N4 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

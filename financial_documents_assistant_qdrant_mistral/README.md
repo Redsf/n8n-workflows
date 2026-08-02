@@ -42,7 +42,7 @@ This exported workflow only contains the ingestion/sync half of the system. Stic
 
 ```mermaid
 flowchart TD
-    N0["When clicking 'Test workflow'<br/><small>manualTrigger</small>"]
+    N0(["When clicking &quot;Test workflow&quot;<br/><small>manualTrigger</small>"])
     N1["Set Variables<br/><small>set</small>"]
     N2["Read File<br/><small>readWriteFile</small>"]
     N3["Embeddings Mistral Cloud<br/><small>embeddingsMistralCloud</small>"]
@@ -51,28 +51,37 @@ flowchart TD
     N6["Prepare Embedding Document<br/><small>set</small>"]
     N7["Remap for File_Added Flow<br/><small>set</small>"]
     N8["Search For Existing Point<br/><small>httpRequest</small>"]
-    N9["Has Existing Point?<br/><small>if</small>"]
+    N9{{"Has Existing Point?<br/><small>if</small>"}}
     N10["Delete Existing Point<br/><small>httpRequest</small>"]
     N11["Search For Existing Point1<br/><small>httpRequest</small>"]
-    N12["Has Existing Point?1<br/><small>if</small>"]
+    N12{{"Has Existing Point?1<br/><small>if</small>"}}
     N13["Delete Existing Point1<br/><small>httpRequest</small>"]
-    N14["Handle File Event<br/><small>switch</small>"]
+    N14{{"Handle File Event<br/><small>switch</small>"}}
     N15["Qdrant Vector Store<br/><small>vectorStoreQdrant</small>"]
     N2 --> N6
     N1 --> N14
-    N14 -->|out0| N8
-    N14 -->|out1| N11
-    N14 -->|out2| N2
-    N4 -.document.-> N15
+    N14 -->|file_deleted| N8
+    N14 -->|file_changed| N11
+    N14 -->|file_added| N2
     N9 --> N13
     N12 --> N10
     N10 --> N7
-    N3 -.embedding.-> N15
     N7 --> N2
     N8 --> N9
     N6 --> N15
     N11 --> N12
     N0 --> N1
+    N4 -.document.-> N15
+    N3 -.embedding.-> N15
     N5 -.textSplitter.-> N4
+
+    class N0 trigger
+    class N3,N4,N5 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

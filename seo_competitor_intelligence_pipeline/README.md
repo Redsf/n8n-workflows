@@ -43,19 +43,23 @@ All three data-fetch nodes retry on failure (SEMrush and GA4 up to three times, 
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Every Monday 7am<br/><small>scheduleTrigger</small>"]
-    N1["Fetch SEMrush Rankings<br/><small>httpRequest</small>"]
-    N2["Fetch GA4 Traffic<br/><small>httpRequest</small>"]
-    N3["Scrape Competitor Pages<br/><small>httpRequest</small>"]
-    N4["Combine Intelligence<br/><small>merge</small>"]
-    N5["Compute Movers & Anomalies<br/><small>code</small>"]
-    N6["Summarize Movers (AI Agent)<br/><small>agent</small>"]
-    N7["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
-    N8["Email Report<br/><small>gmail</small>"]
-    N9["Post to Slack<br/><small>slack</small>"]
-    N10["Error Trigger<br/><small>errorTrigger</small>"]
-    N11["Notify Ops<br/><small>slack</small>"]
+flowchart LR
+    subgraph G0 ["Every Monday 7am"]
+        N0(["Every Monday 7am<br/><small>scheduleTrigger</small>"])
+        N1["Fetch SEMrush Rankings<br/><small>httpRequest</small>"]
+        N2["Fetch GA4 Traffic<br/><small>httpRequest</small>"]
+        N3["Scrape Competitor Pages<br/><small>httpRequest</small>"]
+        N4["Combine Intelligence<br/><small>merge</small>"]
+        N5["Compute Movers &amp; Anomalies<br/><small>code</small>"]
+        N6["Summarize Movers (AI Agent)<br/><small>agent</small>"]
+        N7["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
+        N8["Email Report<br/><small>gmail</small>"]
+        N9["Post to Slack<br/><small>slack</small>"]
+    end
+    subgraph G1 ["Error handling"]
+        N10(["Error Trigger<br/><small>errorTrigger</small>"])
+        N11["Notify Ops<br/><small>slack</small>"]
+    end
     N0 --> N1
     N0 --> N2
     N0 --> N3
@@ -66,7 +70,17 @@ flowchart TD
     N5 --> N6
     N6 --> N8
     N6 --> N9
-    N7 -.languageModel.-> N6
     N10 --> N11
+    N7 -.languageModel.-> N6
+
+    class N0 trigger
+    class N10 errorPath
+    class N7 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

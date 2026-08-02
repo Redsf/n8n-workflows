@@ -43,52 +43,65 @@ Built for support or business inboxes where AI-drafted replies are useful but a 
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Email Trigger (IMAP)<br/><small>emailReadImap</small>"]
-    N1["Markdown<br/><small>markdown</small>"]
-    N2["Send Email<br/><small>emailSend</small>"]
-    N3["Qdrant Vector Store<br/><small>vectorStoreQdrant</small>"]
-    N4["Embeddings OpenAI<br/><small>embeddingsOpenAi</small>"]
-    N5["Email Summarization Chain<br/><small>chainSummarization</small>"]
-    N6["Write email<br/><small>agent</small>"]
-    N7["OpenAI<br/><small>lmChatOpenAi</small>"]
-    N8["Gmail<br/><small>gmail</small>"]
-    N9["Text Classifier<br/><small>textClassifier</small>"]
-    N10["Edit Fields<br/><small>set</small>"]
-    N11["When clicking ‘Test workflow’<br/><small>manualTrigger</small>"]
-    N12["Create collection<br/><small>httpRequest</small>"]
-    N13["Refresh collection<br/><small>httpRequest</small>"]
-    N14["Get folder<br/><small>googleDrive</small>"]
-    N15["Download Files<br/><small>googleDrive</small>"]
-    N16["Default Data Loader<br/><small>documentDefaultDataLoader</small>"]
-    N17["Token Splitter<br/><small>textSplitterTokenSplitter</small>"]
-    N18["Qdrant Vector Store1<br/><small>vectorStoreQdrant</small>"]
-    N19["Embeddings OpenAI1<br/><small>embeddingsOpenAi</small>"]
-    N20["DeepSeek Chat Model<br/><small>lmChatDeepSeek</small>"]
-    N21["Email Reviewer<br/><small>agent</small>"]
+flowchart LR
+    subgraph G0 ["Unwired fragment"]
+        N0["Email Trigger (IMAP)<br/><small>emailReadImap</small>"]
+        N1["Markdown<br/><small>markdown</small>"]
+        N2["Send Email<br/><small>emailSend</small>"]
+        N3["Qdrant Vector Store<br/><small>vectorStoreQdrant</small>"]
+        N4["Embeddings OpenAI<br/><small>embeddingsOpenAi</small>"]
+        N5["Email Summarization Chain<br/><small>chainSummarization</small>"]
+        N6["Write email<br/><small>agent</small>"]
+        N7["OpenAI<br/><small>lmChatOpenAi</small>"]
+        N8["Gmail<br/><small>gmail</small>"]
+        N9{{"Text Classifier<br/><small>textClassifier</small>"}}
+        N10["Edit Fields<br/><small>set</small>"]
+        N20["DeepSeek Chat Model<br/><small>lmChatDeepSeek</small>"]
+        N21["Email Reviewer<br/><small>agent</small>"]
+    end
+    subgraph G1 ["When clicking ‘Test workflow’"]
+        N11(["When clicking ‘Test workflow’<br/><small>manualTrigger</small>"])
+        N12["Create collection<br/><small>httpRequest</small>"]
+        N13["Refresh collection<br/><small>httpRequest</small>"]
+        N14["Get folder<br/><small>googleDrive</small>"]
+        N15["Download Files<br/><small>googleDrive</small>"]
+        N16["Default Data Loader<br/><small>documentDefaultDataLoader</small>"]
+        N17["Token Splitter<br/><small>textSplitterTokenSplitter</small>"]
+        N18["Qdrant Vector Store1<br/><small>vectorStoreQdrant</small>"]
+        N19["Embeddings OpenAI1<br/><small>embeddingsOpenAi</small>"]
+    end
     N8 --> N9
-    N7 -.languageModel.-> N6
-    N7 -.languageModel.-> N21
-    N7 -.languageModel.-> N9
     N1 --> N5
     N14 --> N15
     N10 --> N8
     N6 --> N10
     N15 --> N18
     N21 --> N10
-    N17 -.textSplitter.-> N16
-    N9 -->|0| N2
-    N9 -->|1| N21
-    N4 -.embedding.-> N3
-    N19 -.embedding.-> N18
+    N9 -->|Approved| N2
+    N9 -->|Declined| N21
     N13 --> N14
-    N20 -.languageModel.-> N5
-    N16 -.document.-> N18
-    N3 -.tool.-> N6
-    N3 -.tool.-> N21
     N0 --> N1
     N5 --> N6
     N11 --> N12
     N11 --> N13
+    N7 -.languageModel.-> N6
+    N7 -.languageModel.-> N21
+    N7 -.languageModel.-> N9
+    N17 -.textSplitter.-> N16
+    N4 -.embedding.-> N3
+    N19 -.embedding.-> N18
+    N20 -.languageModel.-> N5
+    N16 -.document.-> N18
+    N3 -.tool.-> N6
+    N3 -.tool.-> N21
+
+    class N11 trigger
+    class N3,N4,N7,N16,N17,N19,N20 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

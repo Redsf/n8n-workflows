@@ -46,38 +46,51 @@ The agent will ask for your name, company, email, and preferred times, check the
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Window Buffer Memory<br/><small>memoryBufferWindow</small>"]
-    N1["Respond to Webhook<br/><small>respondToWebhook</small>"]
-    N2["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
-    N3["Make Appointment<br/><small>toolHttpRequest</small>"]
-    N4["Execute Workflow Trigger<br/><small>executeWorkflowTrigger</small>"]
-    N5["varResponse<br/><small>set</small>"]
-    N6["freeTimeSlots<br/><small>code</small>"]
-    N7["Get Events<br/><small>httpRequest</small>"]
-    N8["Get Availability<br/><small>toolWorkflow</small>"]
-    N9["Send Message<br/><small>toolWorkflow</small>"]
-    N10["Chat Trigger<br/><small>chatTrigger</small>"]
-    N11["Switch<br/><small>switch</small>"]
-    N12["varMessageResponse<br/><small>set</small>"]
-    N13["Send Message1<br/><small>microsoftOutlook</small>"]
-    N14["AI Agent<br/><small>agent</small>"]
-    N15["If<br/><small>if</small>"]
-    N16["Respond With Initial Message<br/><small>respondToWebhook</small>"]
-    N15 -->|true| N14
-    N15 -->|false| N16
-    N11 -->|out0| N7
-    N11 -->|out1| N13
-    N14 --> N1
+flowchart LR
+    subgraph G0 ["Respond to Webhook / Chat Trigger / Respond With Initial Message"]
+        N0["Window Buffer Memory<br/><small>memoryBufferWindow</small>"]
+        N1(["Respond to Webhook<br/><small>respondToWebhook</small>"])
+        N2["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
+        N3["Make Appointment<br/><small>toolHttpRequest</small>"]
+        N8["Get Availability<br/><small>toolWorkflow</small>"]
+        N9["Send Message<br/><small>toolWorkflow</small>"]
+        N10(["Chat Trigger<br/><small>chatTrigger</small>"])
+        N14["AI Agent<br/><small>agent</small>"]
+        N15{{"If<br/><small>if</small>"}}
+        N16(["Respond With Initial Message<br/><small>respondToWebhook</small>"])
+    end
+    subgraph G1 ["Execute Workflow Trigger"]
+        N4(["Execute Workflow Trigger<br/><small>executeWorkflowTrigger</small>"])
+        N5["varResponse<br/><small>set</small>"]
+        N6["freeTimeSlots<br/><small>code</small>"]
+        N7["Get Events<br/><small>httpRequest</small>"]
+        N11{{"Switch<br/><small>switch</small>"}}
+        N12["varMessageResponse<br/><small>set</small>"]
+        N13["Send Message1<br/><small>microsoftOutlook</small>"]
+    end
+    N4 --> N11
+    N6 --> N5
     N7 --> N6
     N10 --> N15
-    N9 -.tool.-> N14
+    N11 -->|availability| N7
+    N11 -->|message| N13
     N13 --> N12
-    N6 --> N5
-    N8 -.tool.-> N14
-    N3 -.tool.-> N14
-    N2 -.languageModel.-> N14
+    N14 --> N1
+    N15 -->|true| N14
+    N15 -->|false| N16
     N0 -.memory.-> N14
-    N4 --> N11
+    N2 -.languageModel.-> N14
+    N3 -.tool.-> N14
+    N8 -.tool.-> N14
+    N9 -.tool.-> N14
+
+    class N1,N4,N10,N16 trigger
+    class N0,N2,N3,N8,N9 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

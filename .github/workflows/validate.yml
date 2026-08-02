@@ -24,6 +24,12 @@ jobs:
       - name: Validate n8n workflow exports
         run: python scripts/validate_workflows.py .
 
+      # Each README's Mermaid diagram is generated from its workflow JSON, so a
+      # workflow edit that skips regeneration is a stale diagram. Fix with:
+      #   python3 scripts/generate_diagrams.py
+      - name: Check architecture diagrams match their workflow JSON
+        run: python scripts/generate_diagrams.py --check
+
       # Working-tree scan only: published files are what matter here, and
       # --no-git keeps the run fast and deterministic as history grows.
       - name: Scan for committed secrets

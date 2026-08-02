@@ -50,7 +50,7 @@ flowchart TD
     N3["Search Google Shopping Prices<br/><small>httpRequest</small>"]
     N4["Analyze Pricing Gap<br/><small>code</small>"]
     N5["Save Result to Memory<br/><small>code</small>"]
-    N6["Filter Critical or Warning Alerts<br/><small>filter</small>"]
+    N6{{"Filter Critical or Warning Alerts<br/><small>filter</small>"}}
     N7["Send Slack Pricing Alert<br/><small>slack</small>"]
     N8["Continue to Next Product<br/><small>noOp</small>"]
     N9["Build Daily Summary Report<br/><small>code</small>"]
@@ -58,10 +58,10 @@ flowchart TD
     N11["Get products from sheets<br/><small>googleSheets</small>"]
     N12["Send a message<br/><small>slack</small>"]
     N13["Log to Price History Sheet<br/><small>googleSheets</small>"]
-    N14["Schedule Trigger<br/><small>scheduleTrigger</small>"]
+    N14(["Schedule Trigger<br/><small>scheduleTrigger</small>"])
     N0 --> N1
-    N1 -->|0| N9
-    N1 -->|1| N2
+    N1 -->|done| N9
+    N1 -->|loop| N2
     N2 --> N3
     N3 --> N4
     N4 --> N5
@@ -74,5 +74,13 @@ flowchart TD
     N11 --> N0
     N13 --> N8
     N14 --> N11
+
+    class N14 trigger
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

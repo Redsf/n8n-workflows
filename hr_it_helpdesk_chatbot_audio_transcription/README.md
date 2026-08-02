@@ -52,47 +52,60 @@ Run the ingestion path before activating the Telegram trigger, or the bot will h
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["When clicking 'Test workflow'<br/><small>manualTrigger</small>"]
-    N1["HTTP Request<br/><small>httpRequest</small>"]
-    N2["Extract from File<br/><small>extractFromFile</small>"]
-    N3["Create HR Policies<br/><small>vectorStorePGVector</small>"]
-    N4["Embeddings OpenAI<br/><small>embeddingsOpenAi</small>"]
-    N5["Default Data Loader<br/><small>documentDefaultDataLoader</small>"]
-    N6["Recursive Character Text Splitter<br/><small>textSplitterRecursiveCharacterTextSplitter</small>"]
-    N7["Telegram Trigger<br/><small>telegramTrigger</small>"]
-    N8["Verify Message Type<br/><small>switch</small>"]
-    N9["OpenAI<br/><small>openAi</small>"]
-    N10["Telegram1<br/><small>telegram</small>"]
-    N11["Unsupported Message Type<br/><small>telegram</small>"]
-    N12["AI Agent<br/><small>agent</small>"]
-    N13["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
-    N14["Postgres Chat Memory<br/><small>memoryPostgresChat</small>"]
-    N15["Answer questions with a vector store<br/><small>toolVectorStore</small>"]
-    N16["Postgres PGVector Store<br/><small>vectorStorePGVector</small>"]
-    N17["OpenAI Chat Model1<br/><small>lmChatOpenAi</small>"]
-    N18["Embeddings OpenAI1<br/><small>embeddingsOpenAi</small>"]
-    N19["Telegram<br/><small>telegram</small>"]
-    N20["Edit Fields<br/><small>set</small>"]
+flowchart LR
+    subgraph G0 ["When clicking 'Test workflow'"]
+        N0(["When clicking 'Test workflow'<br/><small>manualTrigger</small>"])
+        N1["HTTP Request<br/><small>httpRequest</small>"]
+        N2["Extract from File<br/><small>extractFromFile</small>"]
+        N3["Create HR Policies<br/><small>vectorStorePGVector</small>"]
+        N4["Embeddings OpenAI<br/><small>embeddingsOpenAi</small>"]
+        N5["Default Data Loader<br/><small>documentDefaultDataLoader</small>"]
+        N6["Recursive Character Text Splitter<br/><small>textSplitterRecursiveCharacterTextSplitter</small>"]
+    end
+    subgraph G1 ["Telegram Trigger"]
+        N7(["Telegram Trigger<br/><small>telegramTrigger</small>"])
+        N8{{"Verify Message Type<br/><small>switch</small>"}}
+        N9["OpenAI<br/><small>openAi</small>"]
+        N10["Telegram1<br/><small>telegram</small>"]
+        N11["Unsupported Message Type<br/><small>telegram</small>"]
+        N12["AI Agent<br/><small>agent</small>"]
+        N13["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
+        N14["Postgres Chat Memory<br/><small>memoryPostgresChat</small>"]
+        N15["Answer questions with a vector store<br/><small>toolVectorStore</small>"]
+        N16["Postgres PGVector Store<br/><small>vectorStorePGVector</small>"]
+        N17["OpenAI Chat Model1<br/><small>lmChatOpenAi</small>"]
+        N18["Embeddings OpenAI1<br/><small>embeddingsOpenAi</small>"]
+        N19["Telegram<br/><small>telegram</small>"]
+        N20["Edit Fields<br/><small>set</small>"]
+    end
     N9 --> N12
     N12 --> N19
     N10 --> N9
     N20 --> N12
     N1 --> N2
     N7 --> N8
-    N4 -.embedding.-> N3
     N2 --> N3
+    N8 -->|Text| N20
+    N8 -->|Audio| N10
+    N8 -->|fallback| N11
+    N0 --> N1
+    N4 -.embedding.-> N3
     N13 -.languageModel.-> N12
     N18 -.embedding.-> N16
     N17 -.languageModel.-> N15
     N5 -.document.-> N3
-    N8 -->|out0| N20
-    N8 -->|out1| N10
-    N8 -->|out2| N11
     N14 -.memory.-> N12
     N16 -.vectorStore.-> N15
     N6 -.textSplitter.-> N5
-    N0 --> N1
     N15 -.tool.-> N12
+
+    class N0,N7 trigger
+    class N4,N5,N6,N13,N14,N15,N16,N17,N18 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

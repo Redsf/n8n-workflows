@@ -52,25 +52,34 @@ No dedicated error-handling nodes are present. A failed Apify run, LLM call, or 
 
 ```mermaid
 flowchart TD
-    N0["On form submission<br/><small>formTrigger</small>"]
-    N1["Run an Actor and get dataset<br/><small>@apify/n8n-nodes-apify.apify</small>"]
+    N0(["On form submission<br/><small>formTrigger</small>"])
+    N1["Run an Actor and get dataset<br/><small>apify</small>"]
     N2["Loop Over Items<br/><small>splitInBatches</small>"]
     N3["Groq Chat Model<br/><small>lmChatGroq</small>"]
     N4["Varify The authenticity<br/><small>agent</small>"]
     N5["Structured Output Parser<br/><small>outputParserStructured</small>"]
-    N6["If<br/><small>if</small>"]
+    N6{{"If<br/><small>if</small>"}}
     N7["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
     N8["Append row in sheet<br/><small>googleSheets</small>"]
     N9["Rewrite post<br/><small>agent</small>"]
     N0 --> N1
-    N2 --> N4
+    N2 -->|loop| N4
     N1 --> N2
-    N3 -.languageModel.-> N4
     N4 --> N6
-    N5 -.outputParser.-> N4
     N6 --> N9
-    N7 -.languageModel.-> N9
     N9 --> N2
     N9 --> N8
+    N3 -.languageModel.-> N4
+    N5 -.outputParser.-> N4
+    N7 -.languageModel.-> N9
+
+    class N0 trigger
+    class N3,N5,N7 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

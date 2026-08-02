@@ -50,40 +50,53 @@ To test without a live phone call, POST this JSON to the workflow's production w
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["AI Agent<br/><small>agent</small>"]
-    N1["Vector Store Tool<br/><small>toolVectorStore</small>"]
-    N2["Qdrant Vector Store<br/><small>vectorStoreQdrant</small>"]
-    N3["Embeddings OpenAI<br/><small>embeddingsOpenAi</small>"]
-    N4["When clicking ‘Test workflow’<br/><small>manualTrigger</small>"]
-    N5["Create collection<br/><small>httpRequest</small>"]
-    N6["Refresh collection<br/><small>httpRequest</small>"]
-    N7["Get folder<br/><small>googleDrive</small>"]
-    N8["Download Files<br/><small>googleDrive</small>"]
-    N9["Default Data Loader<br/><small>documentDefaultDataLoader</small>"]
-    N10["Token Splitter<br/><small>textSplitterTokenSplitter</small>"]
-    N11["Qdrant Vector Store1<br/><small>vectorStoreQdrant</small>"]
-    N12["Embeddings OpenAI1<br/><small>embeddingsOpenAi</small>"]
-    N13["Respond to ElevenLabs<br/><small>respondToWebhook</small>"]
-    N14["OpenAI<br/><small>lmChatOpenAi</small>"]
-    N15["Listen<br/><small>webhook</small>"]
-    N16["Window Buffer Memory<br/><small>memoryBufferWindow</small>"]
-    N17["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
+flowchart LR
+    subgraph G0 ["Respond to ElevenLabs / Listen"]
+        N0["AI Agent<br/><small>agent</small>"]
+        N1["Vector Store Tool<br/><small>toolVectorStore</small>"]
+        N2["Qdrant Vector Store<br/><small>vectorStoreQdrant</small>"]
+        N3["Embeddings OpenAI<br/><small>embeddingsOpenAi</small>"]
+        N13(["Respond to ElevenLabs<br/><small>respondToWebhook</small>"])
+        N14["OpenAI<br/><small>lmChatOpenAi</small>"]
+        N15(["Listen<br/><small>webhook</small>"])
+        N16["Window Buffer Memory<br/><small>memoryBufferWindow</small>"]
+        N17["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
+    end
+    subgraph G1 ["When clicking ‘Test workflow’"]
+        N4(["When clicking ‘Test workflow’<br/><small>manualTrigger</small>"])
+        N5["Create collection<br/><small>httpRequest</small>"]
+        N6["Refresh collection<br/><small>httpRequest</small>"]
+        N7["Get folder<br/><small>googleDrive</small>"]
+        N8["Download Files<br/><small>googleDrive</small>"]
+        N9["Default Data Loader<br/><small>documentDefaultDataLoader</small>"]
+        N10["Token Splitter<br/><small>textSplitterTokenSplitter</small>"]
+        N11["Qdrant Vector Store1<br/><small>vectorStoreQdrant</small>"]
+        N12["Embeddings OpenAI1<br/><small>embeddingsOpenAi</small>"]
+    end
     N15 --> N0
-    N14 -.languageModel.-> N0
     N0 --> N13
     N7 --> N8
     N8 --> N11
+    N6 --> N7
+    N4 --> N5
+    N4 --> N6
+    N14 -.languageModel.-> N0
     N10 -.textSplitter.-> N9
     N3 -.embedding.-> N2
     N17 -.languageModel.-> N1
     N1 -.tool.-> N0
     N12 -.embedding.-> N11
-    N6 --> N7
     N9 -.document.-> N11
     N2 -.vectorStore.-> N1
     N16 -.memory.-> N0
-    N4 --> N5
-    N4 --> N6
+
+    class N4,N13,N15 trigger
+    class N1,N2,N3,N9,N10,N12,N14,N16,N17 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

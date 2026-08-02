@@ -37,10 +37,19 @@ flowchart TD
     N1["Groq Chat Model<br/><small>lmChatGroq</small>"]
     N2["Simple Memory<br/><small>memoryBufferWindow</small>"]
     N3["Send a message<br/><small>gmail</small>"]
-    N4["Gmail Trigger<br/><small>gmailTrigger</small>"]
-    N1 -.languageModel.-> N0
-    N2 -.memory.-> N0
+    N4(["Gmail Trigger<br/><small>gmailTrigger</small>"])
     N0 --> N3
     N4 --> N0
+    N1 -.languageModel.-> N0
+    N2 -.memory.-> N0
+
+    class N4 trigger
+    class N1,N2 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

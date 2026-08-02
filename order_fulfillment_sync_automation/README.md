@@ -48,24 +48,30 @@ This workflow has two independent triggers.
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["New Order Placed<br/><small>shopifyTrigger</small>"]
-    N1["Book Courier<br/><small>httpRequest</small>"]
-    N2["Booking Success?<br/><small>if</small>"]
-    N3["Update Order Tracking<br/><small>httpRequest</small>"]
-    N4["Notify Customer (Email)<br/><small>gmail</small>"]
-    N5["Notify Customer (WhatsApp)<br/><small>whatsApp</small>"]
-    N6["Flag Ops (Booking Failed)<br/><small>slack</small>"]
-    N7["Poll Delivery Status<br/><small>scheduleTrigger</small>"]
-    N8["Get In-Transit Orders<br/><small>postgres</small>"]
-    N9["Check Each Shipment<br/><small>splitInBatches</small>"]
-    N10["Polling Done<br/><small>noOp</small>"]
-    N11["Get Courier Status<br/><small>httpRequest</small>"]
-    N12["Stage Changed?<br/><small>if</small>"]
-    N13["Notify Stage Update<br/><small>whatsApp</small>"]
-    N14["Update Shipment Record<br/><small>postgres</small>"]
-    N15["Error Trigger<br/><small>errorTrigger</small>"]
-    N16["Notify Ops (Error)<br/><small>slack</small>"]
+flowchart LR
+    subgraph G0 ["New Order Placed"]
+        N0(["New Order Placed<br/><small>shopifyTrigger</small>"])
+        N1["Book Courier<br/><small>httpRequest</small>"]
+        N2{{"Booking Success?<br/><small>if</small>"}}
+        N3["Update Order Tracking<br/><small>httpRequest</small>"]
+        N4["Notify Customer (Email)<br/><small>gmail</small>"]
+        N5["Notify Customer (WhatsApp)<br/><small>whatsApp</small>"]
+        N6["Flag Ops (Booking Failed)<br/><small>slack</small>"]
+    end
+    subgraph G1 ["Poll Delivery Status"]
+        N7(["Poll Delivery Status<br/><small>scheduleTrigger</small>"])
+        N8["Get In-Transit Orders<br/><small>postgres</small>"]
+        N9["Check Each Shipment<br/><small>splitInBatches</small>"]
+        N10["Polling Done<br/><small>noOp</small>"]
+        N11["Get Courier Status<br/><small>httpRequest</small>"]
+        N12{{"Stage Changed?<br/><small>if</small>"}}
+        N13["Notify Stage Update<br/><small>whatsApp</small>"]
+        N14["Update Shipment Record<br/><small>postgres</small>"]
+    end
+    subgraph G2 ["Error handling"]
+        N15(["Error Trigger<br/><small>errorTrigger</small>"])
+        N16["Notify Ops (Error)<br/><small>slack</small>"]
+    end
     N0 --> N1
     N1 --> N2
     N2 -->|true| N3
@@ -74,13 +80,22 @@ flowchart TD
     N3 --> N5
     N7 --> N8
     N8 --> N9
-    N9 -->|0| N10
-    N9 -->|1| N11
+    N9 -->|done| N10
+    N9 -->|loop| N11
     N11 --> N12
     N12 -->|true| N13
     N12 -->|false| N9
     N13 --> N14
     N14 --> N9
     N15 --> N16
+
+    class N0,N7 trigger
+    class N15 errorPath
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

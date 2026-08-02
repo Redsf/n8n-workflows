@@ -58,37 +58,41 @@ GET /webhook/ai-interview-transcripts/<session-uuid>
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Stop Interview?<br/><small>if</small>"]
-    N1["Generate Row<br/><small>set</small>"]
-    N2["Generate Row1<br/><small>set</small>"]
-    N3["Clear For Next Interview<br/><small>memoryManager</small>"]
-    N4["Send Reply To Agent<br/><small>set</small>"]
-    N5["Start Interview<br/><small>formTrigger</small>"]
-    N6["Get Answer<br/><small>form</small>"]
-    N7["Set Interview Topic<br/><small>set</small>"]
-    N8["UUID<br/><small>crypto</small>"]
-    N9["Generate Row2<br/><small>set</small>"]
-    N10["Create Session<br/><small>redis</small>"]
-    N11["Update Session<br/><small>redis</small>"]
-    N12["Update Session1<br/><small>redis</small>"]
-    N13["Update Session2<br/><small>redis</small>"]
-    N14["Valid Session?<br/><small>if</small>"]
-    N15["Respond to Webhook<br/><small>respondToWebhook</small>"]
-    N16["Window Buffer Memory2<br/><small>memoryBufferWindow</small>"]
-    N17["Window Buffer Memory<br/><small>memoryBufferWindow</small>"]
-    N18["Redirect to Completion Screen<br/><small>form</small>"]
-    N19["Webhook<br/><small>webhook</small>"]
-    N20["404 Not Found<br/><small>html</small>"]
-    N21["AI Researcher<br/><small>agent</small>"]
-    N22["Parse Response<br/><small>set</small>"]
-    N23["Groq Chat Model<br/><small>lmChatGroq</small>"]
-    N24["Show Transcript<br/><small>html</small>"]
-    N25["Save to Google Sheet<br/><small>googleSheets</small>"]
-    N26["Session to List<br/><small>splitOut</small>"]
-    N27["Messages To JSON<br/><small>set</small>"]
-    N28["Query By Session<br/><small>redis</small>"]
-    N29["Get Session<br/><small>redis</small>"]
+flowchart LR
+    subgraph G0 ["Start Interview"]
+        N0{{"Stop Interview?<br/><small>if</small>"}}
+        N1["Generate Row<br/><small>set</small>"]
+        N2["Generate Row1<br/><small>set</small>"]
+        N3["Clear For Next Interview<br/><small>memoryManager</small>"]
+        N4["Send Reply To Agent<br/><small>set</small>"]
+        N5(["Start Interview<br/><small>formTrigger</small>"])
+        N6["Get Answer<br/><small>form</small>"]
+        N7["Set Interview Topic<br/><small>set</small>"]
+        N8["UUID<br/><small>crypto</small>"]
+        N9["Generate Row2<br/><small>set</small>"]
+        N10["Create Session<br/><small>redis</small>"]
+        N11["Update Session<br/><small>redis</small>"]
+        N12["Update Session1<br/><small>redis</small>"]
+        N13["Update Session2<br/><small>redis</small>"]
+        N16["Window Buffer Memory2<br/><small>memoryBufferWindow</small>"]
+        N17["Window Buffer Memory<br/><small>memoryBufferWindow</small>"]
+        N18["Redirect to Completion Screen<br/><small>form</small>"]
+        N21["AI Researcher<br/><small>agent</small>"]
+        N22["Parse Response<br/><small>set</small>"]
+        N23["Groq Chat Model<br/><small>lmChatGroq</small>"]
+        N25["Save to Google Sheet<br/><small>googleSheets</small>"]
+        N26["Session to List<br/><small>splitOut</small>"]
+        N27["Messages To JSON<br/><small>set</small>"]
+        N29["Get Session<br/><small>redis</small>"]
+    end
+    subgraph G1 ["Respond to Webhook / Webhook"]
+        N14{{"Valid Session?<br/><small>if</small>"}}
+        N15(["Respond to Webhook<br/><small>respondToWebhook</small>"])
+        N19(["Webhook<br/><small>webhook</small>"])
+        N20["404 Not Found<br/><small>html</small>"]
+        N24["Show Transcript<br/><small>html</small>"]
+        N28["Query By Session<br/><small>redis</small>"]
+    end
     N8 --> N10
     N19 --> N28
     N6 --> N1
@@ -103,7 +107,6 @@ flowchart TD
     N11 --> N7
     N14 -->|true| N24
     N14 -->|false| N20
-    N23 -.languageModel.-> N21
     N26 --> N27
     N24 --> N15
     N5 --> N8
@@ -115,9 +118,19 @@ flowchart TD
     N28 --> N14
     N4 --> N21
     N7 --> N21
-    N17 -.memory.-> N3
-    N16 -.memory.-> N21
     N3 --> N18
     N18 --> N29
+    N23 -.languageModel.-> N21
+    N17 -.memory.-> N3
+    N16 -.memory.-> N21
+
+    class N5,N15,N19 trigger
+    class N16,N17,N23 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

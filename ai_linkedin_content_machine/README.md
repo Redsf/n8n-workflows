@@ -46,29 +46,33 @@ The Quality Gate enforces a minimum 7/10 score plus three critical checks (word 
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Aggregate & Rank Topics<br/><small>code</small>"]
-    N1["Download Generated Image<br/><small>httpRequest</small>"]
-    N2["Quality Gate Check<br/><small>code</small>"]
-    N3["Quality Gate<br/><small>if</small>"]
-    N4["Regenerate & Fix Post<br/><small>openAi</small>"]
-    N5["Merge Post + Image<br/><small>code</small>"]
-    N6["Upload Image to LinkedIn<br/><small>linkedIn</small>"]
-    N7["Post to LinkedIn<br/><small>linkedIn</small>"]
-    N8["Log Success<br/><small>code</small>"]
-    N9["Error Handler<br/><small>code</small>"]
-    N10["When clicking ‘Execute workflow’<br/><small>manualTrigger</small>"]
-    N11["Reddit<br/><small>@apify/n8n-nodes-apify.apify</small>"]
-    N12["TechCrunch<br/><small>rssFeedRead</small>"]
-    N13["The Verge<br/><small>rssFeedRead</small>"]
-    N14["Wired<br/><small>rssFeedRead</small>"]
-    N15["Google_trends search<br/><small>n8n-nodes-serpapi.serpApi</small>"]
-    N16["Merge<br/><small>merge</small>"]
-    N17["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
-    N18["Generate an image<br/><small>googleGemini</small>"]
-    N19["Google Gemini Chat Model<br/><small>lmChatGoogleGemini</small>"]
-    N20["Image generation<br/><small>agent</small>"]
-    N21["For text content<br/><small>agent</small>"]
+flowchart LR
+    subgraph G0 ["When clicking ‘Execute workflow’"]
+        N0["Aggregate &amp; Rank Topics<br/><small>code</small>"]
+        N1["Download Generated Image<br/><small>httpRequest</small>"]
+        N2["Quality Gate Check<br/><small>code</small>"]
+        N3{{"Quality Gate<br/><small>if</small>"}}
+        N4["Regenerate &amp; Fix Post<br/><small>openAi</small>"]
+        N5["Merge Post + Image<br/><small>code</small>"]
+        N6["Upload Image to LinkedIn<br/><small>linkedIn</small>"]
+        N7["Post to LinkedIn<br/><small>linkedIn</small>"]
+        N8["Log Success<br/><small>code</small>"]
+        N10(["When clicking ‘Execute workflow’<br/><small>manualTrigger</small>"])
+        N11["Reddit<br/><small>apify</small>"]
+        N12["TechCrunch<br/><small>rssFeedRead</small>"]
+        N13["The Verge<br/><small>rssFeedRead</small>"]
+        N14["Wired<br/><small>rssFeedRead</small>"]
+        N15["Google_trends search<br/><small>serpApi</small>"]
+        N16["Merge<br/><small>merge</small>"]
+        N17["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
+        N18["Generate an image<br/><small>googleGemini</small>"]
+        N19["Google Gemini Chat Model<br/><small>lmChatGoogleGemini</small>"]
+        N20["Image generation<br/><small>agent</small>"]
+        N21["For text content<br/><small>agent</small>"]
+    end
+    subgraph G1 ["Unwired node"]
+        N9["Error Handler<br/><small>code</small>"]
+    end
     N0 --> N21
     N2 --> N3
     N3 -->|true| N5
@@ -90,9 +94,18 @@ flowchart TD
     N15 --> N16
     N16 --> N0
     N16 --> N20
-    N17 -.languageModel.-> N21
     N18 --> N1
-    N19 -.languageModel.-> N20
     N21 --> N2
+    N17 -.languageModel.-> N21
+    N19 -.languageModel.-> N20
+
+    class N10 trigger
+    class N17,N19 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

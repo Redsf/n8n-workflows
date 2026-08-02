@@ -56,19 +56,19 @@ flowchart TD
     N0["Code<br/><small>code</small>"]
     N1["ApplicantData<br/><small>set</small>"]
     N2["ERPNext - Reject if Resume not Attached<br/><small>erpNext</small>"]
-    N3["Applied Against Job<br/><small>if</small>"]
+    N3{{"Applied Against Job<br/><small>if</small>"}}
     N4["ERPNext - Hold Applicant<br/><small>erpNext</small>"]
     N5["Get Job Opening<br/><small>erpNext</small>"]
     N6["Google Gemini Chat Model<br/><small>lmChatGoogleGemini</small>"]
     N7["Convert to Fields<br/><small>code</small>"]
-    N8["If score less than 80<br/><small>if</small>"]
+    N8{{"If score less than 80<br/><small>if</small>"}}
     N9["Reject Applicant<br/><small>httpRequest</small>"]
     N10["Update Applicant Data<br/><small>httpRequest</small>"]
     N11["Reume Attachment Link<br/><small>set</small>"]
-    N12["Resume Link Provided<br/><small>if</small>"]
+    N12{{"Resume Link Provided<br/><small>if</small>"}}
     N13["Accept Applicant<br/><small>httpRequest</small>"]
-    N14["Webhook<br/><small>webhook</small>"]
-    N15["File Type<br/><small>switch</small>"]
+    N14(["Webhook<br/><small>webhook</small>"])
+    N15{{"File Type<br/><small>switch</small>"}}
     N16["Download PDF Resume<br/><small>httpRequest</small>"]
     N17["PDF to Text<br/><small>extractFromFile</small>"]
     N18["Txt File to Text (Example)<br/><small>extractFromFile</small>"]
@@ -96,7 +96,16 @@ flowchart TD
     N8 -->|false| N13
     N11 --> N15
     N10 --> N8
-    N6 -.languageModel.-> N20
     N18 --> N19
+    N6 -.languageModel.-> N20
+
+    class N14 trigger
+    class N6 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

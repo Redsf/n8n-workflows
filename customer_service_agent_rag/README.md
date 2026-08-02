@@ -38,7 +38,7 @@ The workflow includes pinned sample data on **Gmail Trigger** (a sample refund-p
 
 ```mermaid
 flowchart TD
-    N0["Gmail Trigger<br/><small>gmailTrigger</small>"]
+    N0(["Gmail Trigger<br/><small>gmailTrigger</small>"])
     N1["Edit Fields<br/><small>set</small>"]
     N2["AI Agent<br/><small>agent</small>"]
     N3["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
@@ -49,11 +49,20 @@ flowchart TD
     N8["OpenAI Chat Model1<br/><small>lmChatOpenAi</small>"]
     N0 --> N1
     N1 --> N2
+    N2 --> N7
     N3 -.languageModel.-> N2
     N4 -.memory.-> N2
     N5 -.tool.-> N2
     N6 -.embedding.-> N5
-    N2 --> N7
     N8 -.languageModel.-> N7
+
+    class N0 trigger
+    class N3,N4,N5,N6,N8 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

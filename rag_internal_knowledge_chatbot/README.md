@@ -54,40 +54,46 @@ Notion and Drive API calls retry up to twice on failure. A dedicated **Error Tri
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Nightly Sync (2am)<br/><small>scheduleTrigger</small>"]
-    N1["Search Notion Pages<br/><small>notion</small>"]
-    N2["Search Drive Files<br/><small>googleDrive</small>"]
-    N3["Combine Doc Sources<br/><small>merge</small>"]
-    N4["Normalize Doc List<br/><small>code</small>"]
-    N5["Process Each Doc<br/><small>splitInBatches</small>"]
-    N6["Sync Done<br/><small>noOp</small>"]
-    N7["Is Notion Doc?<br/><small>if</small>"]
-    N8["Get Notion Page Blocks<br/><small>notion</small>"]
-    N9["Flatten Notion Text<br/><small>code</small>"]
-    N10["Download Drive File<br/><small>googleDrive</small>"]
-    N11["Extract Drive Text<br/><small>extractFromFile</small>"]
-    N12["Build Drive Doc<br/><small>code</small>"]
-    N13["Pinecone: Insert Docs<br/><small>vectorStorePinecone</small>"]
-    N14["Insert Embeddings<br/><small>embeddingsOpenAi</small>"]
-    N15["Doc Loader<br/><small>documentDefaultDataLoader</small>"]
-    N16["Slack Q&A Trigger<br/><small>slackTrigger</small>"]
-    N17["Strip Mention<br/><small>code</small>"]
-    N18["Answer Question (AI Agent)<br/><small>agent</small>"]
-    N19["OpenAI Chat Model (Q&A)<br/><small>lmChatOpenAi</small>"]
-    N20["Knowledge Base (RAG Tool)<br/><small>vectorStorePinecone</small>"]
-    N21["Retrieval Embeddings<br/><small>embeddingsOpenAi</small>"]
-    N22["Reply in Thread<br/><small>slack</small>"]
-    N23["Error Trigger<br/><small>errorTrigger</small>"]
-    N24["Notify Ops<br/><small>slack</small>"]
+flowchart LR
+    subgraph G0 ["Nightly Sync (2am)"]
+        N0(["Nightly Sync (2am)<br/><small>scheduleTrigger</small>"])
+        N1["Search Notion Pages<br/><small>notion</small>"]
+        N2["Search Drive Files<br/><small>googleDrive</small>"]
+        N3["Combine Doc Sources<br/><small>merge</small>"]
+        N4["Normalize Doc List<br/><small>code</small>"]
+        N5["Process Each Doc<br/><small>splitInBatches</small>"]
+        N6["Sync Done<br/><small>noOp</small>"]
+        N7{{"Is Notion Doc?<br/><small>if</small>"}}
+        N8["Get Notion Page Blocks<br/><small>notion</small>"]
+        N9["Flatten Notion Text<br/><small>code</small>"]
+        N10["Download Drive File<br/><small>googleDrive</small>"]
+        N11["Extract Drive Text<br/><small>extractFromFile</small>"]
+        N12["Build Drive Doc<br/><small>code</small>"]
+        N13["Pinecone: Insert Docs<br/><small>vectorStorePinecone</small>"]
+        N14["Insert Embeddings<br/><small>embeddingsOpenAi</small>"]
+        N15["Doc Loader<br/><small>documentDefaultDataLoader</small>"]
+    end
+    subgraph G1 ["Slack Q&amp;A Trigger"]
+        N16(["Slack Q&amp;A Trigger<br/><small>slackTrigger</small>"])
+        N17["Strip Mention<br/><small>code</small>"]
+        N18["Answer Question (AI Agent)<br/><small>agent</small>"]
+        N19["OpenAI Chat Model (Q&amp;A)<br/><small>lmChatOpenAi</small>"]
+        N20["Knowledge Base (RAG Tool)<br/><small>vectorStorePinecone</small>"]
+        N21["Retrieval Embeddings<br/><small>embeddingsOpenAi</small>"]
+        N22["Reply in Thread<br/><small>slack</small>"]
+    end
+    subgraph G2 ["Error handling"]
+        N23(["Error Trigger<br/><small>errorTrigger</small>"])
+        N24["Notify Ops<br/><small>slack</small>"]
+    end
     N0 --> N1
     N0 --> N2
     N1 --> N3
     N2 --> N3
     N3 --> N4
     N4 --> N5
-    N5 -->|0| N6
-    N5 -->|1| N7
+    N5 -->|done| N6
+    N5 -->|loop| N7
     N7 -->|true| N8
     N7 -->|false| N10
     N8 --> N9
@@ -96,14 +102,24 @@ flowchart TD
     N11 --> N12
     N12 --> N13
     N13 --> N5
-    N14 -.embedding.-> N13
-    N15 -.document.-> N13
     N16 --> N17
     N17 --> N18
+    N18 --> N22
+    N23 --> N24
+    N14 -.embedding.-> N13
+    N15 -.document.-> N13
     N19 -.languageModel.-> N18
     N20 -.tool.-> N18
     N21 -.embedding.-> N20
-    N18 --> N22
-    N23 --> N24
+
+    class N0,N16 trigger
+    class N23 errorPath
+    class N14,N15,N19,N20,N21 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

@@ -56,7 +56,7 @@ An audio message instead carries `"type": "audio"` with an `audio.id` field (use
 
 ```mermaid
 flowchart TD
-    N0["WhatsApp Trigger<br/><small>whatsAppTrigger</small>"]
+    N0(["WhatsApp Trigger<br/><small>whatsAppTrigger</small>"])
     N1["Get Audio URL<br/><small>whatsApp</small>"]
     N2["Get Video URL<br/><small>whatsApp</small>"]
     N3["Get Image URL<br/><small>whatsApp</small>"]
@@ -67,7 +67,7 @@ flowchart TD
     N8["Get User's Message<br/><small>set</small>"]
     N9["Split Out Message Parts<br/><small>splitOut</small>"]
     N10["Wikipedia<br/><small>toolWikipedia</small>"]
-    N11["Redirect Message Types<br/><small>switch</small>"]
+    N11{{"Redirect Message Types<br/><small>switch</small>"}}
     N12["Get Text<br/><small>wait</small>"]
     N13["Respond to User<br/><small>whatsApp</small>"]
     N14["Image Explainer<br/><small>chainLlm</small>"]
@@ -82,7 +82,6 @@ flowchart TD
     N23["AI Agent<br/><small>agent</small>"]
     N23 --> N13
     N12 --> N22
-    N10 -.tool.-> N23
     N1 --> N5
     N3 --> N6
     N2 --> N4
@@ -97,14 +96,24 @@ flowchart TD
     N8 --> N23
     N17 --> N21
     N18 --> N15
-    N7 -.memory.-> N23
-    N11 -->|out0| N1
-    N11 -->|out1| N2
-    N11 -->|out2| N3
-    N11 -->|out3| N12
+    N11 -->|Audio Message| N1
+    N11 -->|Video Message| N2
+    N11 -->|Image Message| N3
+    N11 -->|fallback| N12
     N9 --> N11
+    N10 -.tool.-> N23
+    N7 -.memory.-> N23
     N16 -.languageModel.-> N23
     N19 -.languageModel.-> N14
     N20 -.languageModel.-> N22
+
+    class N0 trigger
+    class N7,N10,N16,N19,N20 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

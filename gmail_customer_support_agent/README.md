@@ -33,14 +33,23 @@ No dedicated error-handling nodes are present in this workflow. A failed Gmail s
 
 ```mermaid
 flowchart TD
-    N0["Gmail Trigger<br/><small>gmailTrigger</small>"]
+    N0(["Gmail Trigger<br/><small>gmailTrigger</small>"])
     N1["Gmail Send Reply<br/><small>gmail</small>"]
     N2["Groq Chat Model<br/><small>lmChatGroq</small>"]
     N3["AI Agent<br/><small>agent</small>"]
     N4["Simple Memory<br/><small>memoryBufferWindow</small>"]
     N0 --> N3
-    N2 -.languageModel.-> N3
     N3 --> N1
+    N2 -.languageModel.-> N3
     N4 -.memory.-> N3
+
+    class N0 trigger
+    class N2,N4 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

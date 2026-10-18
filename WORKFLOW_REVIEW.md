@@ -1,193 +1,147 @@
-# n8n workflow review: all 59 workflows
+# n8n workflow review and remediation
 
-Reviewed every workflow JSON in the repo. Findings below are split into **verified defects** (I traced the
-connection graph or expression and confirmed the breakage) and **hygiene** (real but uniform across the repo).
+Every workflow JSON in the repo (59 of them; `scripts/` holds none) was reviewed by tracing the
+connection graph and expression references, not just reading node parameters. This file records
+what was found, what was fixed, and what was deliberately left alone.
 
-`scripts/` holds no workflow JSON, so the count is 59, not 60.
+## 1. Defects found and fixed
 
+### `ai_linkedin_content_machine` — was broken in three ways
 
-## 1. Verified defects, worst first
+- **The image branch was severed.** `Image generation` had `main: [[]]` and `Generate an image`
+  had no inbound edge, so `Download Generated Image` never fired and `Upload Image to LinkedIn`
+  ran with no binary. **Fixed:** connected `Image generation -> Generate an image`.
+- **`Quality Gate Check` referenced a node that does not exist.** It called
+  `$('Generate LinkedIn Post')`; the text agent is named `For text content`. The call sat inside a
+  try/catch, so the gate silently reported POOR confidence on every run instead of crashing.
+  **Fixed:** reference corrected.
+- **`Error Handler` was connected to nothing.** **Fixed:** the two LinkedIn nodes now use
+  `onError: continueErrorOutput` and route their error output into it.
+- **Fixed:** removed `pinData`, which replayed stale test output instead of calling the model.
 
+### `candidate_shortlisting_erpnext` — silently discarded candidates
 
-### `ai_document_invoice_extraction_google_drive` — BUG (19 nodes)
+The `File Type` switch declared `.pdf`, `.doc` and `.jpg`, but only output 0 was wired. A `.doc`
+or `.jpg` resume produced no processing and no rejection; the applicant heard nothing.
+**Fixed:** `.doc`, `.jpg` and a new fallback output now route to the existing rejection node.
 
-- `Error Handler` (code) is connected to nothing. Dead code presenting as error handling.
+> Judgement call: marking these applicants Rejected is a business decision. If unsupported
+> formats should instead be queued for manual review, rewire those three outputs.
 
-### `ai_linkedin_content_machine` — BROKEN (22 nodes)
+### `financial_documents_assistant_qdrant_mistral` — changed files were never indexed
 
-- **Image branch is severed.** `Image generation` (agent) has `main: [[]]` and `Generate an image` (Gemini image node) has no inbound. The edge `Image generation -> Generate an image` is missing, so `Download Generated Image` never fires and `Upload Image to LinkedIn` runs with no binary. VERIFIED from the connections map.
-- `Quality Gate Check` calls `$('Generate LinkedIn Post')`; no node by that name exists (the text agent is called `For text content`). It is inside a try/catch, so the gate silently always reports POOR confidence instead of crashing.
-- `Error Handler` (code) is connected to nothing: dead code that looks like error handling on the canvas.
-- Ships `pinData` for `For text content`, so a fresh import replays stale test output instead of calling the model.
+On the `file_changed` path, `Has Existing Point?1` dropped its false branch. A changed file with
+no prior point in Qdrant was discarded. **Fixed:** false branch now routes to
+`Remap for File_Added Flow`, which continues into the read-and-embed chain.
 
-### `candidate_shortlisting_erpnext` — BROKEN (23 nodes)
+Still worth knowing: the shipped trigger is a manual one while `Set Variables` reads `$json.event`.
+Run as imported, `event` is undefined and nothing happens. A Local File Trigger is needed upstream.
+Left as-is because adding one requires knowing the watched directory.
 
-- **`File Type` switch declares `.pdf` / `.doc` / `.jpg` but only output 0 (`.pdf`) is wired.** `.doc` and `.jpg` resumes are silently discarded; the applicant gets no rejection and no processing. VERIFIED.
-- No fallback output on that switch, so any other extension vanishes too.
-- `Txt File to Text (Example)` has no inbound but feeds `Merge1`. [Likely] With Merge v3 in default append mode this resolves, but an unfed Merge input is fragile across n8n versions.
-- Webhook has no authentication.
+### `stock_earnings_rag_analysis` — the ingestion half had no trigger
 
-### `cold_email_outreach_automation` — BUG (21 nodes)
+`List Of Files To Load (Google Sheets) -> Loop Over Items -> Pinecone` had no inbound edge, so the
+index was never populated unless that node was executed by hand. **Fixed:** added an
+`Index Earnings Reports` manual trigger feeding the ingestion chain. Also removed `pinData`.
 
-- `Parse Email Content` (code) is connected to nothing.
-- `Is Status Pending?` drops its false branch. That is intentional filtering, but `typeValidation: strict` on `$json.Status` means a missing Airtable field throws instead of routing false.
+### `social_media_amplifier` — worse than first reported
 
-### `faq_enrichment_at_scale` — BROKEN (29 nodes)
+`Validate Generate Content` did not just call `JSON.parse` unguarded. After parsing, the inner
+condition re-tested `$json.message.content`, the **raw string**, rather than the parsed object.
+A string has no `.twitter` property, so that branch always fell through to `return {}` and the
+parsed content was always discarded. **Fixed:** parse is guarded, and the check now tests the
+parsed object. Also removed `pinData`.
 
-- **Three fully disconnected nodes: `Wordpress`, `Webflow`, `HTTP Request`.** These are the publish targets. The workflow enriches FAQs and then writes them nowhere. VERIFIED.
-- `For Each Service...` main output 0 is explicitly `null` (the 'done' branch is wired to nothing).
-- Two switches with no fallback output.
+### `ai_document_invoice_extraction_google_drive` — dead error handling
 
-### `financial_documents_assistant_qdrant_mistral` — BUG (16 nodes)
+`Error Handler` held real code expecting per-node error data but was connected to nothing.
+**Fixed:** the Drive download and both GPT-4o nodes now route their error output into it.
 
-- **`Has Existing Point?1` (the `file_changed` path) drops its false branch.** If a changed file has no prior point in Qdrant, the new content is never indexed. Fix: wire false -> `Remap for File_Added Flow`. VERIFIED by tracing the `Handle File Event` switch (output 0=file_deleted, 1=file_changed, 2=file_added).
-- `Has Existing Point?` (the `file_deleted` path) also drops false, but that is correct: nothing to delete.
-- Trigger is a manual `When clicking Test workflow`, yet `Set Variables` reads `$json.event`. Run as shipped, `event` is undefined, all three switch outputs are false and nothing happens. A Local File Trigger is needed upstream.
+### `faq_enrichment_at_scale` — cleanup, not a defect
 
-### `social_media_amplifier` — BUG (19 nodes)
+An earlier draft of this review called this workflow broken. **That was wrong.** `Update Row Status`
+feeds `Strapi`, which is the wired publish target, so the workflow does publish. The `Wordpress`,
+`Webflow` and `HTTP Request` nodes were unconfigured alternative-CMS stubs carrying no parameters
+and no connections. **Removed** as dead weight. Add the node for your own CMS in their place.
 
-- `Validate Generate Content` calls `JSON.parse` with no try/catch. One malformed model response kills the whole execution.
-- Ships `pinData` for `Schedule Trigger`.
+## 2. Examined and deliberately left alone
 
-### `stock_earnings_rag_analysis` — BUG (15 nodes)
+- **`cold_email_outreach_automation` / `Parse Email Content`** is `disabled: true` as well as
+  disconnected. That is an intentional "off" switch on a real 8.7 KB implementation, not dead code.
+- **`woocommerce_ai_support_agent` / `Encrypt email`** is a manual utility you run by hand to
+  produce a value for `Example encrypted email`; its partner `Decrypt email address` is disabled.
+  Note it hardcodes `password = 'a random password'`, which is fine for a demo and not for anything
+  else.
+- **IF nodes dropping a false branch** in `linkedin_post_scraper`, `negative_review_monitor`,
+  `support_issue_classifier_resolution` and `cold_email_outreach_automation` are filter patterns
+  where discarding non-matching items is the intent.
+- **`realtime_inventory_auto_reorder_pipeline` / `Already Reordered Today?`** reads inverted
+  (true means *not* reordered today) but is wired correctly.
+- **Default node names** (`AI Agent`, `Merge`, `If`, `Switch`, `Edit Fields`) are n8n's own
+  convention. Renaming roughly 40 of them would churn expressions for little gain.
 
-- **The ingestion half has no trigger.** `List Of Files To Load (Google Sheets)` -> `Loop Over Items` -> Pinecone has no inbound; the only trigger feeds the AI Agent directly. The index is never populated unless you execute that node by hand.
-- `Loop Over Items` 'done' output (index 0) is wired to nothing.
-- Ships `pinData` for `AI Agent`.
+## 3. False positives worth recording
 
-### `woocommerce_ai_support_agent` — BUG (31 nodes)
+So nobody re-raises them:
 
-- `Encrypt email` (code) is connected to nothing, while `Example encrypted email` (a Set node with no inbound) feeds `Decrypt email`. The encrypt/decrypt pair is demo scaffolding that never runs against real data.
-- `Webhook Example Page` has no authentication.
+- **Sub-nodes have no inbound edge by design.** Every `OpenAI Chat Model`, `Embeddings *`,
+  `Window Buffer Memory`, `*Tool` and `Structured Output Parser` connects *outward* to its agent
+  over an `ai_*` port. An early scan flagged about 90 of these; all were false.
+- **`autonomous_ai_crawler`** `$('Add protocool to domain (URL)')` resolves inside the `URLs`
+  toolWorkflow sub-workflow, where that node exists.
+- **`whatsapp_sales_meeting_prep_apify`** `$('body')` and `$('title')` are jQuery selectors in a
+  Code node (`const $ = context.jQuery`), not n8n node references.
 
-## 2. Minor / cosmetic
+## 4. Naming
 
+**17 workflows had no `name` at all** and imported into n8n as blank. Every one of the 59 now
+carries a name.
 
-### `invoice_extraction_human_in_loop_cradl` (20 nodes)
+Each folder's `README.md` already held a curated, accurate heading, in several cases better than
+anything worth inventing (`rag_model_supabase_postgres` is really a Telegram assistant;
+`linkedin_post_scraper` also rewrites). So the workflow `name` is now **synced to the folder
+README heading** across all 59. JSON, folder README and the root table agree.
 
-- Two nodes share the name `Sticky Note`. Cosmetic, but n8n node names are supposed to be unique.
+Two headings carried informal or marketing wording and were changed in the README, the root table
+and the JSON together:
 
-### `resume_data_extraction_pdf_gotenberg` (33 nodes)
-
-- `Generate plain PDF doc` posts to a plaintext `http://` URL (Gotenberg). Fine on localhost, a credential leak over any real network.
-
-### `vision_receipt_verification` (12 nodes)
-
-- `Parse Extraction` and `Build Error Verdict` use the legacy `$node["..."]` syntax. It still works but is deprecated in favour of `$('...')`.
-- `Document Upload Webhook` has no authentication, and it accepts file uploads.
-
-## 3. Intentional-looking patterns I checked and cleared
-
-These tripped my analyzer but are correct on inspection. Listing them so nobody re-raises them:
-
-- **Sub-nodes with no inbound edge** (every `OpenAI Chat Model`, `Embeddings *`, `Window Buffer Memory`, `*Tool`, `Structured Output Parser`). In n8n these connect *outward* to the agent over `ai_*` ports. Roughly 90 apparent hits, all false.
-- **`autonomous_ai_crawler`** `$('Add protocool to domain (URL)')`: that node exists inside the `URLs` toolWorkflow sub-workflow. Valid.
-- **`whatsapp_sales_meeting_prep_apify`** `$('body')` / `$('title')`: jQuery selectors in a Code node (`const $ = context.jQuery`), not n8n node references. Valid.
-- **IF nodes dropping a false branch** in `linkedin_post_scraper`, `negative_review_monitor`, `support_issue_classifier_resolution`, `cold_email_outreach_automation`: all are filter patterns where discarding non-matching items is the intent.
-- **`realtime_inventory_auto_reorder_pipeline` `Already Reordered Today?`**: the name reads inverted (true = *not* reordered today), but the wiring is correct. Rename only.
-- **`financial_documents_...` `Has Existing Point?` on the delete path**: correctly terminal.
-
-## 4. Repo-wide hygiene
-
-| Issue | Workflows | Why it matters |
+| Folder | Before | After |
 |---|---|---|
-| No `retryOnFail` on network nodes | 59/59 | Every OpenAI/HTTP/Sheets call dies on a single 429 or timeout. One checkbox per node. |
-| No `onError` on network nodes | 59/59 | A single failed item aborts the whole run. |
-| No `errorWorkflow` in settings | 58/59 | Defensible for a template library (the ID is instance-specific). |
-| `executionOrder: v0` | 20/59 | Legacy branch ordering; parallel branches that later merge can run out of canvas order. |
+| `ai_linkedin_content_machine` | AI LinkedIn Content Machine | AI LinkedIn Content Pipeline |
+| `whatsapp_business_rag_chatbot` | Complete Business WhatsApp RAG Chatbot | Business WhatsApp RAG Chatbot |
+
+Node names with spelling errors, corrected along with every connection and expression reference:
+
+| Workflow | Before | After |
+|---|---|---|
+| `candidate_shortlisting_erpnext` | Reume Attachment Link | Resume Attachment Link |
+| `customer_service_agent_rag` | G-mail writter | Gmail Writer |
+| `linkedin_post_scraper` | Varify The authenticity | Verify Authenticity |
+| `support_issue_classifier_resolution` | Find Simlar Issues | Find Similar Issues |
+| `cold_email_outreach_automation` | Personalize (triple space) E-mail | Personalize Email |
+
+Left alone on purpose:
+
+- **Default node names** (`AI Agent`, `Merge`, `If`, `Switch`, `Edit Fields`) are n8n's own
+  convention. Renaming roughly 40 of them would churn expressions for little gain.
+- **Folder names.** `README.md` links to them and CI walks them, so renaming is a separate change
+  with its own blast radius.
+
+## 5. Repo-wide hygiene, still outstanding
+
+| Issue | Workflows | Note |
+|---|---|---|
+| No `retryOnFail` on network nodes | 59 / 59 | A per-node boolean with no external dependency. Every LLM call here will eventually meet a 429. |
+| No `onError` on network nodes | 56 / 59 | One failed item aborts the whole run. |
+| No `errorWorkflow` in settings | 58 / 59 | Defensible for a template library; the ID is instance-specific. |
+| `executionOrder: v0` | 20 / 59 | Legacy branch ordering. |
 | Webhook with no authentication | 12 | Publicly callable endpoints. |
-| `pinData` shipped in the file | 7 | A fresh import replays stale test data instead of calling the real service. |
-| Switch with no fallback output | 10 | Unmatched items vanish without trace. |
+| Switch with no fallback output | 9 | Unmatched items vanish without trace. |
 
-### Webhooks with no authentication
+These are uniform across the repo and are a deliberate follow-up rather than part of this pass.
 
-- `ai_content_repurposing_social_publishing`: 'Content Submitted'
-- `candidate_shortlisting_erpnext`: 'Webhook'
-- `conversational_ai_interview_agent`: 'Webhook'
-- `dynamic_prompt_data_extraction_airtable`: 'Airtable Webhook'
-- `ecommerce_order_notifier_logger`: 'New Order Received'
-- `multilingual_guest_assistant`: 'Inbound Message Webhook'
-- `rfp_automation_openai_assistants`: 'Wait for Request'
-- `vision_receipt_verification`: 'Document Upload Webhook'
-- `voice_chatbot_elevenlabs_restaurants`: 'Listen'
-- `whatsapp_business_rag_chatbot`: 'Verify'
-- `whatsapp_business_rag_chatbot`: 'Respond'
-- `woocommerce_ai_support_agent`: 'Example Page'
+## 6. Verification
 
-### Workflows shipping `pinData`
-
-- `ai_linkedin_content_machine`: ['For text content']
-- `autonomous_ai_crawler`: ['Get companies']
-- `bamboohr_policies_benefits_chatbot`: ['AI-Powered HR Benefits and Company Policies Chatbot']
-- `customer_service_agent_rag`: ['Gmail Trigger']
-- `social_media_amplifier`: ['Schedule Trigger']
-- `stock_earnings_rag_analysis`: ['AI Agent']
-- `zoom_meeting_assistant_clickup`: ['Execute Workflow Trigger']
-
-### Workflows on legacy `executionOrder: v0`
-
-`ai_content_repurposing_social_publishing`, `ai_document_invoice_extraction_google_drive`, `bamboohr_policies_benefits_chatbot`, `branded_website_chatbot`, `candidate_shortlisting_erpnext`, `conversational_ai_interview_agent`, `document_to_study_notes_mistral_qdrant`, `dynamic_prompt_data_extraction_airtable`, `email_subscription_service_forms`, `faq_enrichment_at_scale`, `outlook_ai_assistant_monday_airtable`, `pdf_chat_with_citations`, `resume_data_extraction_pdf_gotenberg`, `rfp_automation_openai_assistants`, `supabase_storage_file_chat_agent`, `support_issue_classifier_resolution`, `whatsapp_ai_auto_responder`, `whatsapp_sales_meeting_prep_apify`, `woocommerce_ai_support_agent`, `zoom_meeting_assistant_clickup`
-
-## 5. Full roster: every workflow, with its verdict
-
-| Workflow | Nodes | Verdict |
-|---|---:|---|
-| `abandoned_cart_recovery_engine` | 10 | Clean (hygiene items only) |
-| `ai_content_repurposing_social_publishing` | 14 | Hygiene only: webhook-open |
-| `ai_document_invoice_extraction_google_drive` | 19 | **Bug** - see above |
-| `ai_linkedin_content_machine` | 22 | **BROKEN** - see above |
-| `ai_newsletter_generator_rss_to_email` | 23 | Clean (hygiene items only) |
-| `ai_review_reputation_manager` | 19 | Clean (hygiene items only) |
-| `appointment_reminder_sender` | 6 | Clean (hygiene items only) |
-| `automated_client_ad_reporting` | 13 | Clean (hygiene items only) |
-| `automated_invoice_document_processing` | 14 | Clean (hygiene items only) |
-| `autonomous_ai_crawler` | 12 | Hygiene only: pindata |
-| `bamboohr_policies_benefits_chatbot` | 39 | Hygiene only: pindata |
-| `branded_website_chatbot` | 17 | Hygiene only: switch-no-fallback |
-| `candidate_shortlisting_erpnext` | 23 | **BROKEN** - see above |
-| `cold_email_outreach_automation` | 21 | **Bug** - see above |
-| `conversational_ai_interview_agent` | 30 | Hygiene only: webhook-open |
-| `customer_service_agent_rag` | 9 | Hygiene only: pindata |
-| `cv_processing_workflow` | 11 | Clean (hygiene items only) |
-| `daily_product_pricing_monitor` | 15 | Clean (hygiene items only) |
-| `document_to_study_notes_mistral_qdrant` | 35 | Hygiene only: switch-no-fallback |
-| `dynamic_prompt_data_extraction_airtable` | 36 | Hygiene only: switch-no-fallback, webhook-open |
-| `ecommerce_order_notifier_logger` | 7 | Hygiene only: webhook-open |
-| `email_subscription_service_forms` | 24 | Clean (hygiene items only) |
-| `email_summarization_review_queue` | 22 | Hygiene only: unreachable |
-| `employee_onboarding_automation` | 16 | Clean (hygiene items only) |
-| `faq_enrichment_at_scale` | 29 | **BROKEN** - see above |
-| `financial_documents_assistant_qdrant_mistral` | 16 | **Bug** - see above |
-| `gmail_ai_auto_reply_agent` | 5 | Clean (hygiene items only) |
-| `gmail_customer_support_agent` | 5 | Clean (hygiene items only) |
-| `hacker_news_hiring_scraper` | 15 | Clean (hygiene items only) |
-| `hr_it_helpdesk_chatbot_audio_transcription` | 21 | Clean (hygiene items only) |
-| `instagram_trend_content_generator` | 27 | Clean (hygiene items only) |
-| `invoice_extraction_human_in_loop_cradl` | 20 | Minor - see above |
-| `linkedin_comment_responder` | 11 | Clean (hygiene items only) |
-| `linkedin_post_scraper` | 10 | Hygiene only: if-dead-branch |
-| `modular_email_routing_classifier` | 13 | Clean (hygiene items only) |
-| `multilingual_guest_assistant` | 15 | Hygiene only: switch-no-fallback, webhook-open |
-| `negative_review_monitor` | 5 | Hygiene only: if-dead-branch |
-| `order_fulfillment_sync_automation` | 17 | Clean (hygiene items only) |
-| `outlook_ai_assistant_monday_airtable` | 20 | Clean (hygiene items only) |
-| `pdf_chat_with_citations` | 18 | Clean (hygiene items only) |
-| `personal_shopper_rag_woocommerce` | 21 | Clean (hygiene items only) |
-| `rag_internal_knowledge_chatbot` | 25 | Clean (hygiene items only) |
-| `rag_model_supabase_postgres` | 12 | Clean (hygiene items only) |
-| `realtime_inventory_auto_reorder_pipeline` | 16 | Hygiene only: if-dead-branch |
-| `resume_data_extraction_pdf_gotenberg` | 33 | Minor - see above |
-| `rfp_automation_openai_assistants` | 13 | Hygiene only: webhook-open |
-| `seo_competitor_intelligence_pipeline` | 12 | Clean (hygiene items only) |
-| `social_media_amplifier` | 19 | **Bug** - see above |
-| `stock_earnings_rag_analysis` | 15 | **Bug** - see above |
-| `supabase_storage_file_chat_agent` | 22 | Hygiene only: null-branch, switch-no-fallback |
-| `support_issue_classifier_resolution` | 29 | Hygiene only: if-dead-branch |
-| `vision_receipt_verification` | 12 | Minor - see above |
-| `voice_chatbot_elevenlabs_restaurants` | 18 | Hygiene only: webhook-open |
-| `whatsapp_ai_auto_responder` | 24 | Clean (hygiene items only) |
-| `whatsapp_ai_sales_agent` | 16 | Clean (hygiene items only) |
-| `whatsapp_business_rag_chatbot` | 18 | Hygiene only: webhook-open |
-| `whatsapp_sales_meeting_prep_apify` | 47 | Hygiene only: switch-no-fallback |
-| `woocommerce_ai_support_agent` | 31 | **Bug** - see above |
-| `zoom_meeting_assistant_clickup` | 22 | Hygiene only: pindata |
+- `python scripts/validate_workflows.py .` → **0 errors**, warnings down from 61 to 56.
+- All 59 files parse as JSON and keep the repo's `indent=2` formatting.
+- No stale references remain to any renamed node.

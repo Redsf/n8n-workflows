@@ -1,11 +1,11 @@
 {
+  "name": "Zoom AI Meeting Assistant (ClickUp)",
   "id": "jhNsy4dPQYw9QDaa",
   "meta": {
     "instanceId": "1acdaec6c8e84424b4715cf41a9f7ec057947452db21cd2e22afbc454c8711cd",
     "templateId": "2683",
     "templateCredsSetupCompleted": true
   },
-  "name": "Zoom AI Meeting Assistant",
   "tags": [],
   "nodes": [
     {

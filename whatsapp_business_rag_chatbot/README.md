@@ -1,4 +1,4 @@
-# Complete Business WhatsApp RAG Chatbot
+# Business WhatsApp RAG Chatbot
 
 <!-- CANVAS:START -->
 ![Workflow canvas](canvas.png)

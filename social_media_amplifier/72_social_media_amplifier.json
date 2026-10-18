@@ -1,10 +1,10 @@
 {
+  "name": "AI-Powered Social Media Amplifier",
   "id": "ZeSJSbwXI593H1Qj",
   "meta": {
     "instanceId": "8e1a7e3413df437923cda0e92c098469371d84f7001856e525beaff17be8b941",
     "templateCredsSetupCompleted": true
   },
-  "name": "Social Media AI Agent - Telegram",
   "tags": [],
   "nodes": [
     {
@@ -658,7 +658,7 @@
       ],
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "if ($json.message.content.twitter && $json.message.content.linkedin) {\n \n return $json;\n} else {\n\n const parsedContent = JSON.parse($json.message.content);\n if ($json.message.content.twitter && $json.message.content.linkedin) {\n return parsedContent;\n }\n\n console.log(\"Invalid formatting\")\n return {}\n}"
+        "jsCode": "const content = $json.message?.content;\n\n// Already a parsed object carrying both platforms: pass it straight through.\nif (content && content.twitter && content.linkedin) {\n  return $json;\n}\n\n// Otherwise the model handed back JSON as a string. Parse it before testing,\n// and survive a malformed response instead of killing the execution.\nlet parsed;\ntry {\n  parsed = typeof content === 'string' ? JSON.parse(content) : content;\n} catch (err) {\n  console.log('Invalid formatting: content was not valid JSON -', err.message);\n  return {};\n}\n\nif (parsed && parsed.twitter && parsed.linkedin) {\n  return parsed;\n}\n\nconsole.log('Invalid formatting: missing twitter or linkedin key');\nreturn {};\n"
       },
       "typeVersion": 2
     },
@@ -769,25 +769,6 @@
     }
   ],
   "active": true,
-  "pinData": {
-    "Schedule Trigger": [
-      {
-        "json": {
-          "Hour": "18",
-          "Year": "2024",
-          "Month": "December",
-          "Minute": "00",
-          "Second": "17",
-          "Timezone": "America/New_York (UTC-05:00)",
-          "timestamp": "2024-12-27T18:00:17.035-05:00",
-          "Day of week": "Friday",
-          "Day of month": "27",
-          "Readable date": "December 27th 2024, 6:00:17 pm",
-          "Readable time": "6:00:17 pm"
-        }
-      }
-    ]
-  },
   "settings": {
     "executionOrder": "v1"
   },

@@ -104,7 +104,7 @@ Add `--strict` to treat the advisory warnings as failures.
 | 21 | [Customer Support Issue Classifier & Resolution](support_issue_classifier_resolution) | Classifies incoming support issues by type/severity with an AI text classifier and routes them to resolution. |
 | 22 | [Email Summarization & Review Queue](email_summarization_review_queue) | Summarizes inbox email with AI and queues drafts for human review before anything sends. |
 | 23 | [Outlook AI Email Assistant (Monday + Airtable)](outlook_ai_assistant_monday_airtable) | Drafts Outlook replies with contact context pulled live from Monday.com and Airtable. |
-| 24 | [Complete Business WhatsApp RAG Chatbot](whatsapp_business_rag_chatbot) | Full retrieval-augmented WhatsApp Business chatbot answering from a Qdrant knowledge base. |
+| 24 | [Business WhatsApp RAG Chatbot](whatsapp_business_rag_chatbot) | Full retrieval-augmented WhatsApp Business chatbot answering from a Qdrant knowledge base. |
 | 25 | [AI Voice Chatbot for Restaurants (ElevenLabs)](voice_chatbot_elevenlabs_restaurants) | Voice-in, voice-out customer service agent for restaurants using ElevenLabs speech synthesis over an n8n RAG backend. |
 
 ### E-commerce & Operations
@@ -136,7 +136,7 @@ Add `--strict` to treat the advisory warnings as failures.
 | 38 | [Hacker News "Who is Hiring" Scraper](hacker_news_hiring_scraper) | Extracts and filters relevant job listings from the monthly HN hiring thread into Airtable. |
 | 39 | [AI Content Repurposing & Social Publishing](ai_content_repurposing_social_publishing) | Turns one submitted piece of content into multiple platform-ready posts and tracks weekly performance. |
 | 40 | [SEO & Competitor Intelligence Pipeline](seo_competitor_intelligence_pipeline) | Weekly SEO and competitor data pull, summarized by an LLM and delivered by email. |
-| 41 | [AI LinkedIn Content Machine](ai_linkedin_content_machine) | Sources trending topics via Apify/SerpAPI and drafts and publishes LinkedIn posts with AI. |
+| 41 | [AI LinkedIn Content Pipeline](ai_linkedin_content_machine) | Sources trending topics via Apify/SerpAPI and drafts and publishes LinkedIn posts with AI. |
 | 42 | [AI Newsletter Generator (RSS → Email)](ai_newsletter_generator_rss_to_email) | Aggregates RSS feeds, curates and writes a newsletter draft, and emails it out. |
 | 43 | [Comment Responder for LinkedIn](linkedin_comment_responder) | Scheduled scan of LinkedIn post comments with AI-drafted replies logged for review. |
 | 44 | [LinkedIn Post Scraper](linkedin_post_scraper) | Form-triggered LinkedIn scraping and AI analysis pipeline with results written to Google Sheets. |

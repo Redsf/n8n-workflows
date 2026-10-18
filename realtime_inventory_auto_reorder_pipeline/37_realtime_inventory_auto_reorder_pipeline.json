@@ -1,5 +1,5 @@
 {
-  "name": "Real-Time Inventory & Auto-Reorder Pipeline",
+  "name": "Real-Time Inventory Auto-Reorder Pipeline",
   "nodes": [
     {
       "parameters": {

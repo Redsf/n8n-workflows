@@ -1,4 +1,5 @@
 {
+  "name": "FAQ Enrichment at Scale",
   "meta": {
     "instanceId": "ff412ab2a6cd55af5dedbbab9b8e43f0f3a0cb16fb794fa8d3837f957b771ad2"
   },
@@ -650,51 +651,6 @@
         "operation": "create"
       },
       "typeVersion": 1
-    },
-    {
-      "id": "a42de52f-292b-4b60-ba6d-ff1a672a9758",
-      "name": "Wordpress",
-      "type": "n8n-nodes-base.wordpress",
-      "position": [
-        2978.444471070905,
-        1580
-      ],
-      "parameters": {
-        "additionalFields": {}
-      },
-      "credentials": {
-        "wordpressApi": {
-          "id": "REPLACE_WITH_CREDENTIAL_ID",
-          "name": "Wordpress account"
-        }
-      },
-      "typeVersion": 1
-    },
-    {
-      "id": "abcad9f3-9f05-40e7-8925-32c59b1a6355",
-      "name": "Webflow",
-      "type": "n8n-nodes-base.webflow",
-      "position": [
-        2978.444471070905,
-        1780
-      ],
-      "parameters": {
-        "operation": "create"
-      },
-      "typeVersion": 2
-    },
-    {
-      "id": "60942673-646f-43df-8c0c-c78975ea38c4",
-      "name": "HTTP Request",
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [
-        2978.444471070905,
-        1980
-      ],
-      "parameters": {
-        "options": {}
-      },
-      "typeVersion": 4.2
     },
     {
       "id": "d0a97b0c-1271-48e7-8587-5aae565b9d95",

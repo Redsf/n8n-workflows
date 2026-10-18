@@ -1,5 +1,5 @@
 {
-  "name": "AI Newsletter Generator (RSS → Email)",
+  "name": "AI Newsletter Generator (RSS to Email)",
   "nodes": [
     {
       "parameters": {},

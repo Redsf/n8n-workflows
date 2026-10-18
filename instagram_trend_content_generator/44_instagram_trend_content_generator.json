@@ -1,11 +1,11 @@
 {
+  "name": "Instagram Trend Content Generator",
   "id": "H7porcmXYj7StO23",
   "meta": {
     "instanceId": "35409808e3cc9dd8ecfa6f7b93ae931f074920a2f681e667da8974c0ecf81c52",
     "templateId": "2537",
     "templateCredsSetupCompleted": true
   },
-  "name": "Generate Instagram Content from Top Trends with AI Image Generation",
   "tags": [],
   "nodes": [
     {

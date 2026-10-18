@@ -1,10 +1,10 @@
 {
+  "name": "Financial Documents Assistant (Qdrant + Mistral)",
   "id": "1iSarsa9VoR1XZWx",
   "meta": {
     "instanceId": "8247b806b0e6f94d28ae959e03ad09e53ffbc2a7aafba4df32b48bec8415d11b",
     "templateCredsSetupCompleted": true
   },
-  "name": "Financial Documents Assistant (Qdrant + Mistral AI)",
   "tags": [],
   "nodes": [
     {
@@ -543,6 +543,13 @@
         [
           {
             "node": "Delete Existing Point",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Remap for File_Added Flow",
             "type": "main",
             "index": 0
           }

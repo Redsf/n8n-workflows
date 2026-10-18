@@ -1,5 +1,5 @@
 {
-  "name": "Customer service agent with RAG",
+  "name": "Customer Service Agent with RAG",
   "nodes": [
     {
       "parameters": {
@@ -174,7 +174,7 @@
         -16
       ],
       "id": "31b6824c-6ecc-49bd-998b-a6d49e846462",
-      "name": "G-mail writter"
+      "name": "Gmail Writer"
     },
     {
       "parameters": {
@@ -314,7 +314,7 @@
       "main": [
         [
           {
-            "node": "G-mail writter",
+            "node": "Gmail Writer",
             "type": "main",
             "index": 0
           }
@@ -325,7 +325,7 @@
       "ai_languageModel": [
         [
           {
-            "node": "G-mail writter",
+            "node": "Gmail Writer",
             "type": "ai_languageModel",
             "index": 0
           }

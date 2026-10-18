@@ -1,11 +1,11 @@
 {
+  "name": "Outlook AI Email Assistant (Monday + Airtable)",
   "id": "reQhibpNwU63Y8sn",
   "meta": {
     "instanceId": "2128095e13afd30151f0fb53632960213a789cd45ed0afd3a7fb96a985bb4bcf",
     "templateId": "2454",
     "templateCredsSetupCompleted": true
   },
-  "name": "Microsoft Outlook AI Email Assistant",
   "tags": [],
   "nodes": [
     {

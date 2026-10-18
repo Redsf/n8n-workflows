@@ -1,4 +1,5 @@
 {
+  "name": "AI Candidate Shortlisting (ERPNext)",
   "meta": {
     "instanceId": "e4f78845dfed9ddcfba1945ae00d12e9a7d76eab052afd19299228ce02349d86"
   },
@@ -286,7 +287,7 @@
     },
     {
       "id": "044d26cb-2b34-4613-8d1d-20f40b47da29",
-      "name": "Reume Attachment Link",
+      "name": "Resume Attachment Link",
       "type": "n8n-nodes-base.set",
       "position": [
         -1820,
@@ -472,7 +473,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "fallbackOutput": "extra"
+        }
       },
       "typeVersion": 3.2
     },
@@ -629,6 +632,27 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "ERPNext - Reject if Resume not Attached",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ERPNext - Reject if Resume not Attached",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ERPNext - Reject if Resume not Attached",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -702,7 +726,7 @@
       "main": [
         [
           {
-            "node": "Reume Attachment Link",
+            "node": "Resume Attachment Link",
             "type": "main",
             "index": 0
           }
@@ -774,17 +798,6 @@
         ]
       ]
     },
-    "Reume Attachment Link": {
-      "main": [
-        [
-          {
-            "node": "File Type",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Update Applicant Data": {
       "main": [
         [
@@ -814,6 +827,17 @@
             "node": "Merge1",
             "type": "main",
             "index": 1
+          }
+        ]
+      ]
+    },
+    "Resume Attachment Link": {
+      "main": [
+        [
+          {
+            "node": "File Type",
+            "type": "main",
+            "index": 0
           }
         ]
       ]

@@ -1,5 +1,5 @@
 {
-  "name": "Linkedin post scrapper",
+  "name": "LinkedIn AI-News Scraper & Rewriter",
   "nodes": [
     {
       "parameters": {
@@ -110,7 +110,7 @@
         -48
       ],
       "id": "51bc8942-d18d-46a8-9b76-7f13cfe22bc9",
-      "name": "Varify The authenticity"
+      "name": "Verify Authenticity"
     },
     {
       "parameters": {
@@ -309,7 +309,7 @@
         [],
         [
           {
-            "node": "Varify The authenticity",
+            "node": "Verify Authenticity",
             "type": "main",
             "index": 0
           }
@@ -331,19 +331,8 @@
       "ai_languageModel": [
         [
           {
-            "node": "Varify The authenticity",
+            "node": "Verify Authenticity",
             "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Varify The authenticity": {
-      "main": [
-        [
-          {
-            "node": "If",
-            "type": "main",
             "index": 0
           }
         ]
@@ -353,7 +342,7 @@
       "ai_outputParser": [
         [
           {
-            "node": "Varify The authenticity",
+            "node": "Verify Authenticity",
             "type": "ai_outputParser",
             "index": 0
           }
@@ -392,6 +381,17 @@
           },
           {
             "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Authenticity": {
+      "main": [
+        [
+          {
+            "node": "If",
             "type": "main",
             "index": 0
           }

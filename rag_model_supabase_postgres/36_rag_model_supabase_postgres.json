@@ -1,5 +1,5 @@
 {
-  "name": "RAG Model with Supabase",
+  "name": "Telegram RAG Assistant with Supabase & Postgres Memory",
   "nodes": [
     {
       "parameters": {

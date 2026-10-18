@@ -1,4 +1,5 @@
 {
+  "name": "Customer Support Issue Classifier & Resolution",
   "meta": {
     "instanceId": "408f9fb9940c3cb18ffdef0e0150fe342d6e655c3a9fac21f0f644e8bedabcd9"
   },
@@ -592,7 +593,7 @@
     },
     {
       "id": "9edb0847-5dcf-4357-a1d4-537a126e277b",
-      "name": "Find Simlar Issues",
+      "name": "Find Similar Issues",
       "type": "n8n-nodes-base.jiraTool",
       "position": [
         2160,
@@ -759,17 +760,6 @@
           {
             "node": "Classify Current Issue State",
             "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Find Simlar Issues": {
-      "ai_tool": [
-        [
-          {
-            "node": "KnowledgeBase Agent",
-            "type": "ai_tool",
             "index": 0
           }
         ]
@@ -996,6 +986,17 @@
           {
             "node": "Execute Workflow",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Similar Issues": {
+      "ai_tool": [
+        [
+          {
+            "node": "KnowledgeBase Agent",
+            "type": "ai_tool",
             "index": 0
           }
         ]

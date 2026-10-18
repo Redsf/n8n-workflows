@@ -1,5 +1,5 @@
 {
-  "name": "Job Application CV Processing Workflow",
+  "name": "AI-Screened CV Intake Pipeline",
   "nodes": [
     {
       "parameters": {

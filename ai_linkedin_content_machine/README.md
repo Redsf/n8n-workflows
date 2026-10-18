@@ -1,4 +1,4 @@
-# AI LinkedIn Content Machine
+# AI LinkedIn Content Pipeline
 
 <!-- CANVAS:START -->
 ![Workflow canvas](canvas.png)

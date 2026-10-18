@@ -1,4 +1,5 @@
 {
+  "name": "AI Document & Invoice Extraction from Google Drive",
   "nodes": [
     {
       "parameters": {
@@ -148,7 +149,8 @@
           "name": "Google Drive OAuth2 API"
         }
       },
-      "notes": "Downloads the file as binary. Google Docs are auto-converted to PDF."
+      "notes": "Downloads the file as binary. Google Docs are auto-converted to PDF.",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -224,7 +226,8 @@
           "name": "n8n free OpenAI API credits"
         }
       },
-      "notes": "TODO: configure this node — set model to gpt-4o, add a messages array with the classification prompt and the base64 image as image_url input, set temperature 0.1 / max_tokens 300 / JSON response format, and attach your OpenAI credentials."
+      "notes": "TODO: configure this node — set model to gpt-4o, add a messages array with the classification prompt and the base64 image as image_url input, set temperature 0.1 / max_tokens 300 / JSON response format, and attach your OpenAI credentials.",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -283,7 +286,8 @@
           "name": "n8n free OpenAI API credits"
         }
       },
-      "notes": "TODO: configure this node — set model to gpt-4o, add a messages array with the extraction prompt and the base64 image as image_url input, set temperature 0 / max_tokens 4096 / JSON response format, and attach your OpenAI credentials."
+      "notes": "TODO: configure this node — set model to gpt-4o, add a messages array with the extraction prompt and the base64 image as image_url input, set temperature 0 / max_tokens 4096 / JSON response format, and attach your OpenAI credentials.",
+      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -490,6 +494,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -545,6 +556,13 @@
             "type": "main",
             "index": 0
           }
+        ],
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
@@ -575,6 +593,13 @@
         [
           {
             "node": "Parse & Validate Extraction",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Handler",
             "type": "main",
             "index": 0
           }

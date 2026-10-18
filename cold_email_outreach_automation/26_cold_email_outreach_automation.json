@@ -1,5 +1,5 @@
 {
-  "name": "Cold Email Outreach Automation - Industry Standard",
+  "name": "Cold Email Outreach Automation",
   "nodes": [
     {
       "parameters": {
@@ -771,7 +771,7 @@
         80
       ],
       "id": "2321ec69-bd1d-4263-8806-ff36e985469d",
-      "name": "Personalize   E-mail"
+      "name": "Personalize Email"
     },
     {
       "parameters": {
@@ -907,7 +907,7 @@
       "main": [
         [
           {
-            "node": "Personalize   E-mail",
+            "node": "Personalize Email",
             "type": "main",
             "index": 0
           }
@@ -1001,7 +1001,7 @@
       "ai_languageModel": [
         [
           {
-            "node": "Personalize   E-mail",
+            "node": "Personalize Email",
             "type": "ai_languageModel",
             "index": 0
           }
@@ -1011,17 +1011,6 @@
     "Parse Email Content": {
       "main": [
         []
-      ]
-    },
-    "Personalize   E-mail": {
-      "main": [
-        [
-          {
-            "node": "Code in JavaScript",
-            "type": "main",
-            "index": 0
-          }
-        ]
       ]
     },
     "Code in JavaScript": {
@@ -1085,6 +1074,17 @@
         [
           {
             "node": "Generate Followup G-mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Personalize Email": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
             "type": "main",
             "index": 0
           }

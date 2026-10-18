@@ -1,4 +1,5 @@
 {
+  "name": "Dynamic Prompt Data Extraction (Airtable)",
   "nodes": [
     {
       "id": "36816ae7-414a-482e-8a50-021885237273",

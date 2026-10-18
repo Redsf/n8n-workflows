@@ -1,6 +1,6 @@
 {
+  "name": "Invoice Extraction with Human-in-the-Loop (Cradl AI)",
   "id": "YNjXTXnvpFdWW1Ao",
-  "name": "PDF Invoice Extraction with Human-in-the-Loop (Pro)",
   "tags": [],
   "nodes": [
     {

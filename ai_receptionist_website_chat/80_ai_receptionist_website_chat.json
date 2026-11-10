@@ -1,0 +1,652 @@
+{
+  "name": "AI Receptionist (Website Chat)",
+  "nodes": [
+    {
+      "id": "2fc01e1f-8f06-47b5-88fb-1fd7a522df0b",
+      "name": "Website Chat",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        208
+      ],
+      "parameters": {
+        "public": true,
+        "mode": "hostedChat",
+        "authentication": "none",
+        "initialMessages": "Hi! I'm the virtual receptionist. I can answer questions or book a call with our team. How can I help?",
+        "options": {
+          "responseMode": "streaming",
+          "title": "Talk to us",
+          "subtitle": "Usually answers in seconds, 24/7",
+          "inputPlaceholder": "Ask a question or say \"book a call\"",
+          "loadPreviousSession": "notSupported"
+        }
+      }
+    },
+    {
+      "id": "d8421ccf-7181-4dbd-b039-d1b7d5381e6e",
+      "name": "Business Profile",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        112
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1",
+              "name": "businessName",
+              "value": "Your Company",
+              "type": "string"
+            },
+            {
+              "id": "b2",
+              "name": "timezone",
+              "value": "America/Los_Angeles",
+              "type": "string"
+            },
+            {
+              "id": "b3",
+              "name": "meetingMinutes",
+              "value": 30,
+              "type": "number"
+            },
+            {
+              "id": "b4",
+              "name": "bookableHours",
+              "value": "Monday to Friday, 9:00 to 17:00",
+              "type": "string"
+            },
+            {
+              "id": "b5",
+              "name": "faq",
+              "value": "Services: workflow automation, CRM setup, AI assistants for small and mid-size service businesses.\nWho we help: accounting firms, wealth managers, insurance agencies, real estate and professional services.\nPricing: every project is scoped on a free 30-minute discovery call. Do not quote prices.\nLocation: fully remote, US-based team.\nContact: hello@yourcompany.com",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ec05bb82-3895-46c0-b2c1-f0fe4d1c7920",
+      "name": "AI Receptionist",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        704,
+        112
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "maxIterations": 8,
+          "systemMessage": "=You are the virtual receptionist for {{ $json.businessName }}. Current time: {{ $now.setZone($json.timezone).toFormat('cccc d LLLL yyyy, HH:mm') }} ({{ $json.timezone }}).\n\nWhat you know about the business:\n{{ $json.faq }}\n\nBooking rules:\n- Meetings are {{ $json.meetingMinutes }} minutes, bookable {{ $json.bookableHours }} in {{ $json.timezone }}.\n- Before booking, collect first name, email and what they need. Phone is optional.\n- Call Save Lead to HubSpot as soon as you have an email.\n- Always call Check Availability for the exact slot before offering or booking it. If it is busy, suggest the next free slot.\n- Repeat the date, time and time zone back and get a clear yes before calling Book Meeting.\n- After booking, confirm and tell them a calendar invite is on its way.\n\nStyle and guardrails:\n- Short, warm, plain-English replies (two to four sentences).\n- Only answer from the business information above. Never invent prices, guarantees or policies.\n- Do not give legal, tax or financial advice. Offer a call with the team instead.\n- If the visitor asks for a person, is unhappy, or you are unsure, call Hand Off to Human and tell them someone will follow up by email."
+        }
+      }
+    },
+    {
+      "id": "a0b2e724-6baa-4621-8a2f-49d4508e8a86",
+      "name": "Claude Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        448,
+        336
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-5"
+        },
+        "options": {
+          "maxTokensToSample": 1024
+        }
+      },
+      "credentials": {}
+    },
+    {
+      "id": "8854a38f-bdad-4d4d-b926-af44feb714ab",
+      "name": "Conversation Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        576,
+        336
+      ],
+      "parameters": {
+        "sessionIdType": "fromInput",
+        "contextWindowLength": 12
+      }
+    },
+    {
+      "id": "3066c1f8-5a78-4330-933a-965f9a46e382",
+      "name": "Check Availability",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        704,
+        336
+      ],
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Check whether a time slot is free on the team calendar. Call this before offering or booking any time.",
+        "resource": "calendar",
+        "operation": "availability",
+        "calendar": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Team calendar"
+        },
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('slotStart', 'Start of the slot in ISO 8601 with time zone offset, e.g. 2026-11-17T14:00:00-08:00') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('slotEnd', 'End of the slot in ISO 8601 with time zone offset') }}",
+        "options": {
+          "outputFormat": "availability"
+        }
+      },
+      "credentials": {}
+    },
+    {
+      "id": "1eda4feb-33fb-4a9c-a90e-fc436223952b",
+      "name": "Book Meeting",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        832,
+        336
+      ],
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Book a confirmed meeting on the team calendar and invite the visitor. Only call after Check Availability returned available and the visitor confirmed the time, name and email.",
+        "resource": "event",
+        "operation": "create",
+        "calendar": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Team calendar"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('meetingStart', 'Meeting start in ISO 8601 with time zone offset') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('meetingEnd', 'Meeting end in ISO 8601 with time zone offset') }}",
+        "useDefaultReminders": true,
+        "additionalFields": {
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('meetingTitle', 'Short title, e.g. Discovery call with Dana Whitfield (Whitfield CPA)') }}",
+          "description": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('meetingNotes', 'Two or three lines on what the visitor needs, plus their phone number if given') }}",
+          "attendees": [
+            "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('visitorEmail', 'Visitor email address') }}"
+          ],
+          "sendUpdates": "all"
+        }
+      },
+      "credentials": {}
+    },
+    {
+      "id": "d1b547c9-9a8a-4839-8e14-49b15447711a",
+      "name": "Save Lead to HubSpot",
+      "type": "n8n-nodes-base.hubspotTool",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        336
+      ],
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Create or update the visitor as a HubSpot contact. Call once you know their email, before booking.",
+        "resource": "contact",
+        "operation": "upsert",
+        "authentication": "oAuth2",
+        "email": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('email', 'Visitor email address') }}",
+        "additionalFields": {
+          "firstName": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('firstName', 'Visitor first name') }}",
+          "lastName": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('lastName', 'Visitor last name, empty if unknown') }}",
+          "companyName": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('company', 'Visitor company, empty if unknown') }}",
+          "phoneNumber": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('phone', 'Visitor phone number, empty if not given') }}",
+          "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('summary', 'One-sentence summary of what the visitor needs') }}",
+          "lifeCycleStage": "lead"
+        }
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "af3e4f4e-1396-4458-b969-74254a575924",
+      "name": "Hand Off to Human",
+      "type": "n8n-nodes-base.slackTool",
+      "typeVersion": 2.7,
+      "position": [
+        1088,
+        336
+      ],
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Alert the team in Slack when the visitor asks for a person, is upset, has an urgent or legal/financial question, or you are not sure of the answer.",
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "website-chat"
+        },
+        "messageType": "text",
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('handoffMessage', 'Slack message: who the visitor is (name, email, phone if known), what they need, and why a human should step in') }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "id": "d41467a5-8721-48ef-b0e1-f1c1d600b22b",
+      "name": "Log Chat Message",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        304
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Website Chat Log"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "receivedAt": "={{ $now.toISO() }}",
+            "sessionId": "={{ $json.sessionId }}",
+            "message": "={{ $json.chatInput }}"
+          },
+          "schema": [
+            {
+              "id": "receivedAt",
+              "displayName": "receivedAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sessionId",
+              "displayName": "sessionId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "15a455ec-52f7-4699-a168-5438cb694e87",
+      "name": "On Workflow Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        624
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "207d349a-40e5-4031-9b8e-d42475e19663",
+      "name": "Format Error Details",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        624
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1",
+              "name": "failedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "e2",
+              "name": "workflow",
+              "value": "={{ $json.workflow?.name ?? \"unknown\" }}",
+              "type": "string"
+            },
+            {
+              "id": "e3",
+              "name": "failedNode",
+              "value": "={{ $json.execution?.lastNodeExecuted ?? \"unknown\" }}",
+              "type": "string"
+            },
+            {
+              "id": "e4",
+              "name": "errorMessage",
+              "value": "={{ ($json.execution?.error?.message ?? \"No message\").slice(0, 500) }}",
+              "type": "string"
+            },
+            {
+              "id": "e5",
+              "name": "executionUrl",
+              "value": "={{ $json.execution?.url ?? \"\" }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "28a9ac69-6067-425a-b150-6c45a2318325",
+      "name": "Alert #automation-alerts",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        448,
+        528
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "automation-alerts"
+        },
+        "messageType": "text",
+        "text": "=:x: *{{ $json.workflow }} failed*\nNode: {{ $json.failedNode }}\nError: {{ $json.errorMessage }}\n<{{ $json.executionUrl }}|Open the failed run>",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "787f6d18-b968-426c-8631-629e46fa811d",
+      "name": "Log to Error Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        720
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Automation Error Log"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "e476b61f-a1d3-4708-a6d3-054abf25e007",
+      "name": "Sticky Note e476b61f",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -96
+      ],
+      "parameters": {
+        "content": "## AI Receptionist (Website Chat)\n\nA chat widget that answers questions from your business profile, saves visitors to HubSpot, checks real calendar availability and books meetings with a calendar invite. When it is unsure, or the visitor asks for a person, it hands off to your team in Slack.\n\n**Guardrails:** answers only from the profile, never quotes prices, no legal or tax advice, always confirms the slot before booking.\n\n**Setup**\n1. Edit **Business Profile** (name, time zone, hours, FAQ)\n2. Connect Anthropic, Google Calendar, HubSpot, Slack and Google Sheets\n3. Pick your calendar in both calendar tools\n4. Activate, then embed the chat on your site with the `@n8n/chat` snippet (see README)",
+        "color": 7,
+        "width": 480,
+        "height": 480
+      }
+    },
+    {
+      "id": "14b7d822-970d-4bf3-a683-cda8b378452e",
+      "name": "Sticky Note 14b7d822",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        192,
+        16
+      ],
+      "parameters": {
+        "content": "### Receptionist\nThe agent uses memory per chat session and four tools. Replies stream straight to the widget.",
+        "color": 5,
+        "width": 768,
+        "height": 224
+      }
+    },
+    {
+      "id": "6b7c5422-6033-473e-9f37-4694d441d292",
+      "name": "Sticky Note 6b7c5422",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        192,
+        208
+      ],
+      "parameters": {
+        "content": "### Chat log\nEvery visitor message is logged on a parallel branch, so logging never delays or breaks the reply.",
+        "color": 4,
+        "width": 160,
+        "height": 224
+      }
+    },
+    {
+      "id": "9e327e8e-b057-4cd3-bcfa-200c34d20883",
+      "name": "Sticky Note 9e327e8e",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        432
+      ],
+      "parameters": {
+        "content": "### Error handling\nAny failed run posts to #automation-alerts and is logged to the error sheet.",
+        "color": 2,
+        "width": 608,
+        "height": 416
+      }
+    }
+  ],
+  "connections": {
+    "Website Chat": {
+      "main": [
+        [
+          {
+            "node": "Business Profile",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log Chat Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Business Profile": {
+      "main": [
+        [
+          {
+            "node": "AI Receptionist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Receptionist",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversation Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Receptionist",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Availability": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Receptionist",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Book Meeting": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Receptionist",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Lead to HubSpot": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Receptionist",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hand Off to Human": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Receptionist",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On Workflow Error": {
+      "main": [
+        [
+          {
+            "node": "Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error Details": {
+      "main": [
+        [
+          {
+            "node": "Alert #automation-alerts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log to Error Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

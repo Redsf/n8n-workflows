@@ -1,0 +1,1095 @@
+{
+  "name": "Speed-to-Lead Instant Response",
+  "nodes": [
+    {
+      "id": "11930d61-9add-452f-a8ab-4637f6918ac0",
+      "name": "New Lead Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        192
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "speed-to-lead",
+        "responseMode": "responseNode"
+      }
+    },
+    {
+      "id": "3be9f417-0c44-46e4-bb8b-3b6d473fee23",
+      "name": "Business Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        192
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "businessName",
+              "value": "Your Company",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "bookingUrl",
+              "value": "https://calendly.com/your-team/discovery-call",
+              "type": "string"
+            },
+            {
+              "id": "s3",
+              "name": "smsFromNumber",
+              "value": "+15555550100",
+              "type": "string"
+            },
+            {
+              "id": "s4",
+              "name": "senderName",
+              "value": "Your Company Team",
+              "type": "string"
+            },
+            {
+              "id": "s5",
+              "name": "hubspotPortalId",
+              "value": "0000000",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "085b2ec4-444b-46e9-b657-94c2d2cdbb3a",
+      "name": "Normalize Lead",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        192
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "n1",
+              "name": "firstName",
+              "value": "={{ String($json.body?.firstName ?? $json.firstName ?? \"\").trim() || \"there\" }}",
+              "type": "string"
+            },
+            {
+              "id": "n2",
+              "name": "lastName",
+              "value": "={{ String($json.body?.lastName ?? $json.lastName ?? \"\").trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "n3",
+              "name": "email",
+              "value": "={{ String($json.body?.email ?? $json.email ?? \"\").trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "n4",
+              "name": "phone",
+              "value": "={{ (() => { const d = String($json.body?.phone ?? $json.phone ?? \"\").replace(/\\D/g, \"\"); if (d.length === 10) return \"+1\" + d; if (d.length === 11 && d.startsWith(\"1\")) return \"+\" + d; return d.length >= 8 ? \"+\" + d : \"\"; })() }}",
+              "type": "string"
+            },
+            {
+              "id": "n5",
+              "name": "company",
+              "value": "={{ String($json.body?.company ?? $json.company ?? \"\").trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "n6",
+              "name": "message",
+              "value": "={{ String($json.body?.message ?? $json.message ?? \"\").trim().slice(0, 1000) }}",
+              "type": "string"
+            },
+            {
+              "id": "n7",
+              "name": "source",
+              "value": "={{ $json.body?.source ?? $json.source ?? \"website\" }}",
+              "type": "string"
+            },
+            {
+              "id": "n8",
+              "name": "receivedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "649a5c38-eeeb-4af9-821d-81093956c3ee",
+      "name": "Valid Lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        192
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test($json.email) }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "964e86d4-df31-45f4-a2fc-4dc48094f69d",
+      "name": "Confirm Receipt",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        96
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": true, \"message\": \"Thanks! Check your phone and inbox in the next minute.\" }",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "43c0b38e-be70-48a0-8e84-775290709800",
+      "name": "Upsert HubSpot Contact",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        96
+      ],
+      "parameters": {
+        "resource": "contact",
+        "operation": "upsert",
+        "authentication": "oAuth2",
+        "email": "={{ $('Normalize Lead').item.json.email }}",
+        "additionalFields": {
+          "firstName": "={{ $('Normalize Lead').item.json.firstName }}",
+          "lastName": "={{ $('Normalize Lead').item.json.lastName }}",
+          "companyName": "={{ $('Normalize Lead').item.json.company }}",
+          "phoneNumber": "={{ $('Normalize Lead').item.json.phone }}",
+          "message": "={{ $('Normalize Lead').item.json.message }}",
+          "lifeCycleStage": "lead"
+        }
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "1c6ec024-ab38-4449-bffb-efd251569648",
+      "name": "Send Instant Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        96
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Normalize Lead').item.json.email }}",
+        "subject": "=Thanks for reaching out, {{ $('Normalize Lead').item.json.firstName }}",
+        "emailType": "html",
+        "message": "=<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;max-width:560px\"><p>Hi {{ $('Normalize Lead').item.json.firstName }},</p><p>Thanks for contacting {{ $('Business Settings').item.json.businessName }}. We got your message and someone from our team will reach out shortly.</p><p>If you would rather not wait, pick a time that suits you and we will come prepared:</p><p><a href=\"{{ $('Business Settings').item.json.bookingUrl }}\" style=\"display:inline-block;background:#111827;color:#ffffff;padding:12px 22px;border-radius:6px;text-decoration:none;font-weight:bold\">Book a call</a></p><p>Best,<br>{{ $('Business Settings').item.json.senderName }}</p></div>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "={{ $('Business Settings').item.json.senderName }}"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "df1ebd65-242a-4cc7-ba43-ba230044c276",
+      "name": "Has Phone Number?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1568,
+        96
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Normalize Lead').item.json.phone }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "397eeab8-afa0-4a0a-8399-d81815cf4c97",
+      "name": "Send Instant SMS",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1792,
+        32
+      ],
+      "parameters": {
+        "resource": "sms",
+        "operation": "send",
+        "from": "={{ $('Business Settings').item.json.smsFromNumber }}",
+        "to": "={{ $('Normalize Lead').item.json.phone }}",
+        "message": "=Hi {{ $('Normalize Lead').item.json.firstName }}, thanks for contacting {{ $('Business Settings').item.json.businessName }}! Grab a time that works for you here: {{ $('Business Settings').item.json.bookingUrl }} Reply STOP to opt out."
+      },
+      "credentials": {},
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "d5a89f5e-00c7-4bf9-a7fe-374b150a0ca6",
+      "name": "Alert Sales Rep",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        2016,
+        96
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "new-leads"
+        },
+        "messageType": "text",
+        "text": "=:zap: *New lead, reply now*\n*{{ $('Normalize Lead').item.json.firstName }} {{ $('Normalize Lead').item.json.lastName }}* at {{ $('Normalize Lead').item.json.company || 'unknown company' }}\nEmail: {{ $('Normalize Lead').item.json.email }}\nPhone: {{ $('Normalize Lead').item.json.phone || 'not given' }}\nSource: {{ $('Normalize Lead').item.json.source }}\n> {{ $('Normalize Lead').item.json.message || 'No message' }}\nInstant text and email already sent with the booking link. <https://app.hubspot.com/contacts/{{ $('Business Settings').item.json.hubspotPortalId }}/record/0-1/{{ $('Upsert HubSpot Contact').item.json.vid }}|Open in HubSpot>",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "eb480a30-84e1-44f2-bf5b-4016c593979c",
+      "name": "Reject Invalid Lead",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        288
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": false, \"error\": \"A valid email address is required.\" }",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    },
+    {
+      "id": "a7ed5090-2e3f-4060-a654-6424210d6dce",
+      "name": "Build First-Touch Log",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2240,
+        96
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "l1",
+              "name": "receivedAt",
+              "value": "={{ $('Normalize Lead').item.json.receivedAt }}",
+              "type": "string"
+            },
+            {
+              "id": "l2",
+              "name": "email",
+              "value": "={{ $('Normalize Lead').item.json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "l3",
+              "name": "name",
+              "value": "={{ $('Normalize Lead').item.json.firstName }} {{ $('Normalize Lead').item.json.lastName }}",
+              "type": "string"
+            },
+            {
+              "id": "l4",
+              "name": "company",
+              "value": "={{ $('Normalize Lead').item.json.company }}",
+              "type": "string"
+            },
+            {
+              "id": "l5",
+              "name": "source",
+              "value": "={{ $('Normalize Lead').item.json.source }}",
+              "type": "string"
+            },
+            {
+              "id": "l6",
+              "name": "hubspotContactId",
+              "value": "={{ $('Upsert HubSpot Contact').item.json.vid }}",
+              "type": "string"
+            },
+            {
+              "id": "l7",
+              "name": "smsSent",
+              "value": "={{ $('Normalize Lead').item.json.phone ? 'yes' : 'no phone' }}",
+              "type": "string"
+            },
+            {
+              "id": "l8",
+              "name": "secondsToFirstTouch",
+              "value": "={{ Math.round(($now.toMillis() - DateTime.fromISO($('Normalize Lead').item.json.receivedAt).toMillis()) / 1000) }}",
+              "type": "number"
+            },
+            {
+              "id": "l9",
+              "name": "outcome",
+              "value": "auto-replied",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "executeOnce": true
+    },
+    {
+      "id": "0efc96ba-7ca5-4856-af8a-8aebbb76556a",
+      "name": "Log First Touch",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2464,
+        96
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Speed-to-Lead Log"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "70ba2df5-5a99-4afe-9720-15b5e77c9e42",
+      "name": "Wait 15 Minutes",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2688,
+        96
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 15,
+        "unit": "minutes"
+      }
+    },
+    {
+      "id": "5be13f09-8078-46bd-96ee-1c48876ee13b",
+      "name": "Check Contact Activity",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        2912,
+        96
+      ],
+      "parameters": {
+        "resource": "contact",
+        "operation": "get",
+        "authentication": "oAuth2",
+        "contactId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Upsert HubSpot Contact').item.json.vid }}"
+        },
+        "additionalFields": {
+          "formSubmissionMode": "none",
+          "listMemberships": false,
+          "propertiesCollection": {
+            "propertiesValues": {
+              "properties": [
+                "hs_latest_meeting_activity",
+                "notes_last_contacted",
+                "hs_lead_status"
+              ],
+              "propertyMode": "valueOnly"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "ab6e0664-6545-4749-a2bd-40e1ec6ea5ca",
+      "name": "Booked or Contacted?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3136,
+        96
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.properties?.hs_latest_meeting_activity?.value ?? \"\" }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            },
+            {
+              "leftValue": "={{ $json.properties?.notes_last_contacted?.value ?? \"\" }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "or"
+        }
+      }
+    },
+    {
+      "id": "da26d690-8736-4913-ae23-05a47774cce1",
+      "name": "Lead Handled In Time",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        3360,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "642224e9-52ed-4c28-81b3-bf2f1178b0a4",
+      "name": "Create Call-Now Task",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        3360,
+        192
+      ],
+      "parameters": {
+        "resource": "engagement",
+        "operation": "create",
+        "authentication": "oAuth2",
+        "type": "task",
+        "dueDate": "={{ $now.plus(30, \"minutes\").toFormat(\"yyyy-MM-dd HH:mm:ss\") }}",
+        "metadata": {
+          "subject": "=Call now: {{ $('Normalize Lead').item.json.firstName }} {{ $('Normalize Lead').item.json.lastName }} has not booked",
+          "body": "=Lead came in {{ $('Normalize Lead').item.json.receivedAt }} via {{ $('Normalize Lead').item.json.source }}. No meeting booked and no contact logged after 15 minutes. Phone: {{ $('Normalize Lead').item.json.phone || 'not given' }}. Message: {{ $('Normalize Lead').item.json.message }}",
+          "forObjectType": "CONTACT",
+          "status": "NOT_STARTED"
+        },
+        "additionalFields": {
+          "associations": {
+            "contactIds": "={{ $('Upsert HubSpot Contact').item.json.vid }}"
+          }
+        }
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "24646823-1f69-4a7f-b127-c8983bc82ab1",
+      "name": "Escalate Unanswered Lead",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        3584,
+        192
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "new-leads"
+        },
+        "messageType": "text",
+        "text": "=:rotating_light: *15 minutes and no contact yet*\n{{ $('Normalize Lead').item.json.firstName }} {{ $('Normalize Lead').item.json.lastName }} ({{ $('Normalize Lead').item.json.company || 'no company' }}) has not booked and nobody has logged a call. A call-now task was created in HubSpot.\nPhone: {{ $('Normalize Lead').item.json.phone || 'not given' }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "43b5189e-fb17-4e14-be43-e80b8c50508d",
+      "name": "On Workflow Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        608
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "5308ab20-b85a-4840-86e5-d2f72310dc14",
+      "name": "Format Error Details",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        608
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1",
+              "name": "failedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "e2",
+              "name": "workflow",
+              "value": "={{ $json.workflow?.name ?? \"unknown\" }}",
+              "type": "string"
+            },
+            {
+              "id": "e3",
+              "name": "failedNode",
+              "value": "={{ $json.execution?.lastNodeExecuted ?? \"unknown\" }}",
+              "type": "string"
+            },
+            {
+              "id": "e4",
+              "name": "errorMessage",
+              "value": "={{ ($json.execution?.error?.message ?? \"No message\").slice(0, 500) }}",
+              "type": "string"
+            },
+            {
+              "id": "e5",
+              "name": "executionUrl",
+              "value": "={{ $json.execution?.url ?? \"\" }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "150f3ce5-8641-445f-903a-c69c500b7026",
+      "name": "Alert #automation-alerts",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        448,
+        512
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "automation-alerts"
+        },
+        "messageType": "text",
+        "text": "=:x: *{{ $json.workflow }} failed*\nNode: {{ $json.failedNode }}\nError: {{ $json.errorMessage }}\n<{{ $json.executionUrl }}|Open the failed run>",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "c1223a88-afea-4684-8936-addad32b6462",
+      "name": "Log to Error Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        704
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Automation Error Log"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "5c29a36e-919a-44e4-8816-6d78c236192b",
+      "name": "Sticky Note 5c29a36e",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -96
+      ],
+      "parameters": {
+        "content": "## Speed-to-Lead Instant Response\n\nEvery new lead gets a text and an email with your booking link **within seconds**, the rep is pinged in Slack, and the contact lands in HubSpot. If nobody has booked or logged a call after 15 minutes, a call-now task is created and the team is nudged again.\n\n**Setup**\n1. Edit **Business Settings** (company name, booking link, Twilio number, HubSpot portal ID)\n2. Connect HubSpot, Gmail, Twilio, Slack and Google Sheets\n3. Create Slack channels `#new-leads` and `#automation-alerts`\n4. Point the two Sheets nodes at your log sheets\n5. POST leads to the webhook URL (see README for the payload)",
+        "color": 7,
+        "width": 480,
+        "height": 460
+      }
+    },
+    {
+      "id": "c0345236-9001-415f-999a-4da158bc1990",
+      "name": "Sticky Note c0345236",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        96
+      ],
+      "parameters": {
+        "content": "### 1. Intake\nNormalize the payload, fix US phone numbers to +1 format, reject bad emails with a 400.",
+        "color": 4,
+        "width": 1056,
+        "height": 320
+      }
+    },
+    {
+      "id": "d16d8e8b-24e5-4211-9441-bf15b8949de6",
+      "name": "Sticky Note d16d8e8b",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        864,
+        -64
+      ],
+      "parameters": {
+        "content": "### 2. Instant first touch\nSave to HubSpot, then email, text (if a phone was given) and Slack. Each send retries 3 times and never blocks the others.",
+        "color": 5,
+        "width": 1728,
+        "height": 288
+      }
+    },
+    {
+      "id": "f12705c1-be68-422e-9093-aecca3b77e88",
+      "name": "Sticky Note f12705c1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2656,
+        -96
+      ],
+      "parameters": {
+        "content": "### 3. 15-minute safety net\nIf no meeting is booked and no call is logged, create a call-now task and escalate.",
+        "color": 3,
+        "width": 1056,
+        "height": 416
+      }
+    },
+    {
+      "id": "ebb3b750-bbb5-4a54-952e-be2cd49ed004",
+      "name": "Sticky Note ebb3b750",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        416
+      ],
+      "parameters": {
+        "content": "### Error handling\nAny failed run posts to #automation-alerts and is logged to the error sheet.",
+        "color": 2,
+        "width": 608,
+        "height": 416
+      }
+    }
+  ],
+  "connections": {
+    "New Lead Webhook": {
+      "main": [
+        [
+          {
+            "node": "Business Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Business Settings": {
+      "main": [
+        [
+          {
+            "node": "Normalize Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Lead": {
+      "main": [
+        [
+          {
+            "node": "Valid Lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid Lead?": {
+      "main": [
+        [
+          {
+            "node": "Confirm Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject Invalid Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm Receipt": {
+      "main": [
+        [
+          {
+            "node": "Upsert HubSpot Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert HubSpot Contact": {
+      "main": [
+        [
+          {
+            "node": "Send Instant Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Instant Email": {
+      "main": [
+        [
+          {
+            "node": "Has Phone Number?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Phone Number?": {
+      "main": [
+        [
+          {
+            "node": "Send Instant SMS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alert Sales Rep",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Instant SMS": {
+      "main": [
+        [
+          {
+            "node": "Alert Sales Rep",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Sales Rep": {
+      "main": [
+        [
+          {
+            "node": "Build First-Touch Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build First-Touch Log": {
+      "main": [
+        [
+          {
+            "node": "Log First Touch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log First Touch": {
+      "main": [
+        [
+          {
+            "node": "Wait 15 Minutes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 15 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Check Contact Activity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Contact Activity": {
+      "main": [
+        [
+          {
+            "node": "Booked or Contacted?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Booked or Contacted?": {
+      "main": [
+        [
+          {
+            "node": "Lead Handled In Time",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Call-Now Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Call-Now Task": {
+      "main": [
+        [
+          {
+            "node": "Escalate Unanswered Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On Workflow Error": {
+      "main": [
+        [
+          {
+            "node": "Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error Details": {
+      "main": [
+        [
+          {
+            "node": "Alert #automation-alerts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log to Error Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

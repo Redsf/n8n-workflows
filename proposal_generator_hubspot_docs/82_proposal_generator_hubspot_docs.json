@@ -1,0 +1,1109 @@
+{
+  "name": "Proposal Generator",
+  "nodes": [
+    {
+      "id": "1704b837-34e1-4429-832f-da4a4c9f3cc3",
+      "name": "Deal Reached Proposal",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        288
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "proposal-ready",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "3eb9a093-07aa-43d0-843b-c61faa28f7a3",
+      "name": "Proposal Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        288
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "p1",
+              "name": "dealId",
+              "value": "={{ String($json.body?.dealId ?? $json.body?.objectId ?? $json.dealId ?? \"\") }}",
+              "type": "string"
+            },
+            {
+              "id": "p2",
+              "name": "templateDocId",
+              "value": "YOUR_TEMPLATE_GOOGLE_DOC_ID",
+              "type": "string"
+            },
+            {
+              "id": "p3",
+              "name": "outputFolderId",
+              "value": "YOUR_PROPOSALS_FOLDER_ID",
+              "type": "string"
+            },
+            {
+              "id": "p4",
+              "name": "businessName",
+              "value": "Your Company",
+              "type": "string"
+            },
+            {
+              "id": "p5",
+              "name": "senderName",
+              "value": "Alex from Your Company",
+              "type": "string"
+            },
+            {
+              "id": "p6",
+              "name": "validDays",
+              "value": 30,
+              "type": "number"
+            },
+            {
+              "id": "p7",
+              "name": "sentStageId",
+              "value": "presentationscheduled",
+              "type": "string"
+            },
+            {
+              "id": "p8",
+              "name": "hubspotPortalId",
+              "value": "0000000",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "f6d7a170-929d-4d1e-91fc-e6a00b7059fc",
+      "name": "Get Deal and Associations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        448,
+        288
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.hubapi.com/crm/v3/objects/deals/{{ $json.dealId }}?properties=dealname,amount,description,closedate&associations=line_items,contacts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "options": {}
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "d6e9ef21-d12f-4b6a-92ad-688ab8d96588",
+      "name": "Has Line Items and Contact?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        288
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ ($json.associations?.[\"line items\"]?.results ?? $json.associations?.line_items?.results ?? []).length > 0 && ($json.associations?.contacts?.results ?? []).length > 0 }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "a865a279-a4d1-4eef-b274-051840933caa",
+      "name": "Get Line Items",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        896,
+        192
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/line_items/batch/read",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ properties: [\"name\", \"description\", \"quantity\", \"price\", \"amount\"], inputs: ($json.associations?.[\"line items\"]?.results ?? $json.associations?.line_items?.results ?? []).map(r => ({ id: r.id })) }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "46d79c2f-e3e4-4fa3-951d-51588b852f16",
+      "name": "Get Primary Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1120,
+        192
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.hubapi.com/crm/v3/objects/contacts/{{ $('Get Deal and Associations').item.json.associations.contacts.results[0].id }}?properties=firstname,lastname,email,company,jobtitle",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "options": {}
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "93fee0f5-a08f-4aa7-a0c8-b42e97a8cbf3",
+      "name": "Build Proposal Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        192
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const settings = $('Proposal Settings').first().json;\nconst deal = $('Get Deal and Associations').first().json;\nconst items = $('Get Line Items').first().json.results ?? [];\nconst contact = $('Get Primary Contact').first().json.properties ?? {};\n\nconst money = (n) => '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nconst lines = items.map((li) => {\n  const p = li.properties ?? {};\n  const qty = Number(p.quantity || 1);\n  const amount = Number(p.amount || qty * Number(p.price || 0));\n  return { name: p.name || 'Item', description: p.description || '', qty, price: Number(p.price || 0), amount };\n});\nif (lines.length === 0) {\n  throw new Error(`Deal ${settings.dealId} has no readable line items`);\n}\nconst total = lines.reduce((sum, l) => sum + l.amount, 0);\nconst lineText = lines\n  .map((l) => `${l.name} (${l.qty} x ${money(l.price)}): ${money(l.amount)}${l.description ? '\\n   ' + l.description : ''}`)\n  .join('\\n');\nconst today = DateTime.now();\n\nreturn [{\n  json: {\n    dealId: settings.dealId,\n    dealName: deal.properties?.dealname || 'Proposal',\n    scope: deal.properties?.description || '',\n    clientFirstName: contact.firstname || 'there',\n    clientName: [contact.firstname, contact.lastname].filter(Boolean).join(' '),\n    clientEmail: contact.email || '',\n    clientCompany: contact.company || '',\n    lineItems: lineText,\n    total: money(total),\n    proposalDate: today.toFormat('LLLL d, yyyy'),\n    validUntil: today.plus({ days: settings.validDays }).toFormat('LLLL d, yyyy'),\n    fileName: `Proposal - ${contact.company || contact.lastname || 'Client'} - ${today.toFormat('yyyy-MM-dd')}`,\n  },\n}];"
+      }
+    },
+    {
+      "id": "507813b0-d910-403a-bd4d-30b9a845c33a",
+      "name": "Contact Has Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1568,
+        192
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.clientEmail }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "a00f4bad-d7ff-4025-a3ab-0f35fb722083",
+      "name": "Copy Proposal Template",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1792,
+        96
+      ],
+      "parameters": {
+        "resource": "file",
+        "operation": "copy",
+        "authentication": "oAuth2",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Proposal Settings').item.json.templateDocId }}"
+        },
+        "name": "={{ $json.fileName }}",
+        "sameFolder": false,
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Proposal Settings').item.json.outputFolderId }}"
+        },
+        "options": {}
+      },
+      "credentials": {},
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "cbedfacf-a6bb-46be-8c9b-bc55a24d4f6e",
+      "name": "Fill Placeholders",
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        96
+      ],
+      "parameters": {
+        "resource": "document",
+        "operation": "update",
+        "authentication": "oAuth2",
+        "documentURL": "={{ $json.id }}",
+        "simple": true,
+        "actionsUi": {
+          "actionFields": [
+            {
+              "object": "text",
+              "action": "replaceAll",
+              "text": "{{client_name}}",
+              "replaceText": "={{ $('Build Proposal Data').item.json.clientName }}",
+              "matchCase": true
+            },
+            {
+              "object": "text",
+              "action": "replaceAll",
+              "text": "{{client_company}}",
+              "replaceText": "={{ $('Build Proposal Data').item.json.clientCompany }}",
+              "matchCase": true
+            },
+            {
+              "object": "text",
+              "action": "replaceAll",
+              "text": "{{deal_name}}",
+              "replaceText": "={{ $('Build Proposal Data').item.json.dealName }}",
+              "matchCase": true
+            },
+            {
+              "object": "text",
+              "action": "replaceAll",
+              "text": "{{scope}}",
+              "replaceText": "={{ $('Build Proposal Data').item.json.scope }}",
+              "matchCase": true
+            },
+            {
+              "object": "text",
+              "action": "replaceAll",
+              "text": "{{line_items}}",
+              "replaceText": "={{ $('Build Proposal Data').item.json.lineItems }}",
+              "matchCase": true
+            },
+            {
+              "object": "text",
+              "action": "replaceAll",
+              "text": "{{total}}",
+              "replaceText": "={{ $('Build Proposal Data').item.json.total }}",
+              "matchCase": true
+            },
+            {
+              "object": "text",
+              "action": "replaceAll",
+              "text": "{{proposal_date}}",
+              "replaceText": "={{ $('Build Proposal Data').item.json.proposalDate }}",
+              "matchCase": true
+            },
+            {
+              "object": "text",
+              "action": "replaceAll",
+              "text": "{{valid_until}}",
+              "replaceText": "={{ $('Build Proposal Data').item.json.validUntil }}",
+              "matchCase": true
+            }
+          ]
+        }
+      },
+      "credentials": {},
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "f006c259-2e60-4838-a3ef-36c15fb59afd",
+      "name": "Approve Proposal",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        2240,
+        96
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendAndWait",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "proposals"
+        },
+        "message": "=*Proposal ready for review*\nClient: {{ $('Build Proposal Data').item.json.clientName }} ({{ $('Build Proposal Data').item.json.clientCompany }}), {{ $('Build Proposal Data').item.json.clientEmail }}\nDeal: {{ $('Build Proposal Data').item.json.dealName }}\nTotal: *{{ $('Build Proposal Data').item.json.total }}*, valid until {{ $('Build Proposal Data').item.json.validUntil }}\n\n<https://docs.google.com/document/d/{{ $('Copy Proposal Template').item.json.id }}/edit|Open the draft in Google Docs>. Make any edits in the doc first, then approve to email it as a PDF.",
+        "responseType": "approval",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "Send to client",
+            "disapproveLabel": "Hold"
+          }
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "limitType": "afterTimeInterval",
+              "resumeAmount": 3,
+              "resumeUnit": "days"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "id": "8ef95b17-e904-4e6f-95c2-6523687b513b",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2464,
+        96
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.data?.approved === true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "99ecf2d0-a676-4db0-bac0-91ddcba6caa4",
+      "name": "Export as PDF",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2688,
+        0
+      ],
+      "parameters": {
+        "resource": "file",
+        "operation": "download",
+        "authentication": "oAuth2",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Copy Proposal Template').item.json.id }}"
+        },
+        "options": {
+          "binaryPropertyName": "data",
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "application/pdf"
+            }
+          },
+          "fileName": "={{ $('Build Proposal Data').item.json.fileName }}.pdf"
+        }
+      },
+      "credentials": {},
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "02d86d03-a066-4fbc-9067-e22fc54eb1be",
+      "name": "Email Proposal",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2912,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Build Proposal Data').item.json.clientEmail }}",
+        "subject": "=Your proposal from {{ $('Proposal Settings').item.json.businessName }}: {{ $('Build Proposal Data').item.json.dealName }}",
+        "emailType": "html",
+        "message": "=<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;max-width:560px\"><p>Hi {{ $('Build Proposal Data').item.json.clientFirstName }},</p><p>Thanks again for your time. Your proposal for <strong>{{ $('Build Proposal Data').item.json.dealName }}</strong> is attached as a PDF.</p><p>Total investment: <strong>{{ $('Build Proposal Data').item.json.total }}</strong>. The proposal is valid until {{ $('Build Proposal Data').item.json.validUntil }}.</p><p>Reply to this email with any questions, or if you would like to walk through it together.</p><p>Best,<br>{{ $('Proposal Settings').item.json.senderName }}</p></div>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "={{ $('Proposal Settings').item.json.senderName }}",
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "data"
+              }
+            ]
+          }
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "a0b01a36-12b6-4a93-ac15-d4676d8a73e4",
+      "name": "Move Deal to Proposal Sent",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        3136,
+        0
+      ],
+      "parameters": {
+        "resource": "deal",
+        "operation": "update",
+        "authentication": "oAuth2",
+        "dealId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Proposal Settings').item.json.dealId }}"
+        },
+        "updateFields": {
+          "stage": "={{ $('Proposal Settings').item.json.sentStageId }}"
+        }
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "24a1e1d1-e6b6-478d-b9ed-ae5ffdcce5f6",
+      "name": "Confirm Sent",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        3360,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "proposals"
+        },
+        "messageType": "text",
+        "text": "=:white_check_mark: Proposal for *{{ $('Build Proposal Data').item.json.clientCompany || $('Build Proposal Data').item.json.clientName }}* ({{ $('Build Proposal Data').item.json.total }}) emailed to {{ $('Build Proposal Data').item.json.clientEmail }}. Deal moved to the next stage.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "e6dc775b-8a44-4091-83db-3b62641d12b6",
+      "name": "Note Proposal on Hold",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        2688,
+        192
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "proposals"
+        },
+        "messageType": "text",
+        "text": "=:pause_button: Proposal for {{ $('Build Proposal Data').item.json.clientName }} was not sent. The draft stays in Google Docs: <https://docs.google.com/document/d/{{ $('Copy Proposal Template').item.json.id }}/edit|open it> and send it manually when ready.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "829dca57-d4f7-4ac7-b109-d7759379e97e",
+      "name": "Ask for Contact Email",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1792,
+        288
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "proposals"
+        },
+        "messageType": "text",
+        "text": "=:warning: The contact on *{{ $json.dealName }}* has no email address, so no proposal was built. Add an email in HubSpot and move the deal to the proposal stage again.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "3fb65550-7d3c-4c93-882e-3fe831a7026a",
+      "name": "Ask Rep to Fix Deal",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        896,
+        384
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "proposals"
+        },
+        "messageType": "text",
+        "text": "=:warning: Could not build a proposal for *{{ $json.properties?.dealname ?? 'deal ' + $('Proposal Settings').item.json.dealId }}*. The deal needs at least one line item and one associated contact. <https://app.hubspot.com/contacts/{{ $('Proposal Settings').item.json.hubspotPortalId }}/record/0-3/{{ $('Proposal Settings').item.json.dealId }}|Open the deal>, fix it, then move it to the proposal stage again.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "7929f917-1b81-48ed-8a5f-89e5443e550d",
+      "name": "On Workflow Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        704
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "00f6471e-b79f-4457-9079-ebd2a72af8ac",
+      "name": "Format Error Details",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        704
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1",
+              "name": "failedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "e2",
+              "name": "workflow",
+              "value": "={{ $json.workflow?.name ?? \"unknown\" }}",
+              "type": "string"
+            },
+            {
+              "id": "e3",
+              "name": "failedNode",
+              "value": "={{ $json.execution?.lastNodeExecuted ?? \"unknown\" }}",
+              "type": "string"
+            },
+            {
+              "id": "e4",
+              "name": "errorMessage",
+              "value": "={{ ($json.execution?.error?.message ?? \"No message\").slice(0, 500) }}",
+              "type": "string"
+            },
+            {
+              "id": "e5",
+              "name": "executionUrl",
+              "value": "={{ $json.execution?.url ?? \"\" }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "b1b1ea4a-4bf7-49fc-bff2-35c48212766c",
+      "name": "Alert #automation-alerts",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        448,
+        608
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "automation-alerts"
+        },
+        "messageType": "text",
+        "text": "=:x: *{{ $json.workflow }} failed*\nNode: {{ $json.failedNode }}\nError: {{ $json.errorMessage }}\n<{{ $json.executionUrl }}|Open the failed run>",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "95b008a3-b8fa-4ae0-93e3-bb89c5cae08b",
+      "name": "Log to Error Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        800
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Automation Error Log"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "566f22f1-dd9b-448c-944e-7399e19293f6",
+      "name": "Sticky Note 566f22f1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -96
+      ],
+      "parameters": {
+        "content": "## Proposal Generator\n\nWhen a HubSpot deal reaches your proposal stage, this pulls the deal, its line items and the main contact, fills your Google Docs template, and posts the draft to Slack for review. After approval it emails the client a PDF and moves the deal to the next stage. Nothing reaches the client without a human yes.\n\n**Template placeholders:** `{{client_name}}`, `{{client_company}}`, `{{deal_name}}`, `{{scope}}`, `{{line_items}}`, `{{total}}`, `{{proposal_date}}`, `{{valid_until}}`\n\n**Setup**\n1. Create the template doc and output folder, put their IDs in **Proposal Settings**\n2. In a HubSpot workflow, send a webhook with `dealId` to `/proposal-ready` when a deal enters the proposal stage\n3. Connect HubSpot, Google Drive, Google Docs, Gmail and Slack\n4. Set `sentStageId` to your pipeline's next stage ID",
+        "color": 7,
+        "width": 480,
+        "height": 560
+      }
+    },
+    {
+      "id": "abf274ca-2d63-424f-af35-fa5cef5b93db",
+      "name": "Sticky Note abf274ca",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        192,
+        96
+      ],
+      "parameters": {
+        "content": "### 1. Gather deal data\nDeal, line items and primary contact from the HubSpot API. Missing data goes back to the rep instead of failing.",
+        "color": 4,
+        "width": 1728,
+        "height": 416
+      }
+    },
+    {
+      "id": "9c48e5b3-ace2-4c40-8e09-a010d607fc2c",
+      "name": "Sticky Note 9c48e5b3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        0
+      ],
+      "parameters": {
+        "content": "### 2. Draft and approve\nCopy the template, fill every placeholder, then wait up to 3 days for a Slack approval.",
+        "color": 5,
+        "width": 832,
+        "height": 224
+      }
+    },
+    {
+      "id": "b13b9942-2426-4ff4-b42f-92248e0cddc5",
+      "name": "Sticky Note b13b9942",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2656,
+        -96
+      ],
+      "parameters": {
+        "content": "### 3. Send and update CRM\nExport the final doc as PDF, email it, move the deal stage, confirm in Slack.",
+        "color": 6,
+        "width": 832,
+        "height": 416
+      }
+    },
+    {
+      "id": "7fbc3c47-0779-4ffe-b8fb-f80f1d86e35b",
+      "name": "Sticky Note 7fbc3c47",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        512
+      ],
+      "parameters": {
+        "content": "### Error handling\nAny failed run posts to #automation-alerts and is logged to the error sheet.",
+        "color": 2,
+        "width": 608,
+        "height": 416
+      }
+    }
+  ],
+  "connections": {
+    "Deal Reached Proposal": {
+      "main": [
+        [
+          {
+            "node": "Proposal Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Proposal Settings": {
+      "main": [
+        [
+          {
+            "node": "Get Deal and Associations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Deal and Associations": {
+      "main": [
+        [
+          {
+            "node": "Has Line Items and Contact?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Line Items and Contact?": {
+      "main": [
+        [
+          {
+            "node": "Get Line Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ask Rep to Fix Deal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Line Items": {
+      "main": [
+        [
+          {
+            "node": "Get Primary Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Primary Contact": {
+      "main": [
+        [
+          {
+            "node": "Build Proposal Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Proposal Data": {
+      "main": [
+        [
+          {
+            "node": "Contact Has Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contact Has Email?": {
+      "main": [
+        [
+          {
+            "node": "Copy Proposal Template",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ask for Contact Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy Proposal Template": {
+      "main": [
+        [
+          {
+            "node": "Fill Placeholders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fill Placeholders": {
+      "main": [
+        [
+          {
+            "node": "Approve Proposal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approve Proposal": {
+      "main": [
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Export as PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Note Proposal on Hold",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export as PDF": {
+      "main": [
+        [
+          {
+            "node": "Email Proposal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Proposal": {
+      "main": [
+        [
+          {
+            "node": "Move Deal to Proposal Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move Deal to Proposal Sent": {
+      "main": [
+        [
+          {
+            "node": "Confirm Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On Workflow Error": {
+      "main": [
+        [
+          {
+            "node": "Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error Details": {
+      "main": [
+        [
+          {
+            "node": "Alert #automation-alerts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log to Error Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

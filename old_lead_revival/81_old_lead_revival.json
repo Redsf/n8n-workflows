@@ -1,0 +1,1078 @@
+{
+  "name": "Old Lead Revival",
+  "nodes": [
+    {
+      "id": "c82b56dd-9f56-473e-becf-be2c08dfdece",
+      "name": "Weekdays 9 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        304
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "740f1945-973d-40f9-8c0c-28faab730a85",
+      "name": "Revival Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        304
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "v1",
+              "name": "businessName",
+              "value": "Your Company",
+              "type": "string"
+            },
+            {
+              "id": "v2",
+              "name": "senderName",
+              "value": "Alex from Your Company",
+              "type": "string"
+            },
+            {
+              "id": "v3",
+              "name": "bookingUrl",
+              "value": "https://calendly.com/your-team/discovery-call",
+              "type": "string"
+            },
+            {
+              "id": "v4",
+              "name": "staleDays",
+              "value": 90,
+              "type": "number"
+            },
+            {
+              "id": "v5",
+              "name": "dailyCap",
+              "value": 15,
+              "type": "number"
+            },
+            {
+              "id": "v6",
+              "name": "cutoffMs",
+              "value": "={{ $now.minus(90, \"days\").toMillis() }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "e4f0efbf-8d35-4006-8181-9b0f3f61d058",
+      "name": "Find Cold Leads",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        304
+      ],
+      "parameters": {
+        "resource": "contact",
+        "operation": "search",
+        "authentication": "oAuth2",
+        "returnAll": false,
+        "limit": "={{ $json.dailyCap }}",
+        "filterGroupsUi": {
+          "filterGroupsValues": [
+            {
+              "filtersUi": {
+                "filterValues": [
+                  {
+                    "propertyName": "lifecyclestage|enumeration",
+                    "operator": "EQ",
+                    "value": "lead"
+                  },
+                  {
+                    "propertyName": "notes_last_updated|datetime",
+                    "operator": "LT",
+                    "value": "={{ $json.cutoffMs }}"
+                  },
+                  {
+                    "propertyName": "hs_email_optout|bool",
+                    "operator": "NEQ",
+                    "value": "true"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "properties": [
+            "firstname",
+            "lastname",
+            "email",
+            "company",
+            "jobtitle",
+            "message",
+            "notes_last_updated"
+          ],
+          "sortBy": "notes_last_updated",
+          "direction": "ASCENDING"
+        }
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "39ba4456-3135-4076-8b2f-d70b38ede7c2",
+      "name": "Has Email",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        304
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.properties?.email ?? \"\" }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "8396020a-0e41-4314-87f9-245bfb92c421",
+      "name": "Post Daily Summary",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1184,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "lead-revival"
+        },
+        "messageType": "text",
+        "text": "=:recycle: Lead revival done for {{ $now.toFormat('cccc d LLL') }}: {{ $input.all().filter(i => i.json.outcome === 'sent').length }} sent, {{ $input.all().filter(i => i.json.outcome !== 'sent').length }} skipped.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "196bece4-9974-49ac-8084-ca8e6b1180f3",
+      "name": "Write Revival Email",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1120,
+        304
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "=Lead: {{ $json.properties.firstname || 'there' }} {{ $json.properties.lastname || '' }}, {{ $json.properties.jobtitle || 'unknown role' }} at {{ $json.properties.company || 'unknown company' }}.\nWhat they originally asked about: {{ $json.properties.message || 'no notes' }}\nLast activity: {{ $json.properties.notes_last_updated || 'unknown' }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "=You write short re-engagement emails for {{ $('Revival Settings').first().json.businessName }}. Write the BODY only: no subject, no greeting line, no sign-off. 60 to 110 words, plain text, two or three short paragraphs. Reference what they asked about if known, offer one concrete idea that might help now, and end with a low-pressure question. Never invent facts, prices, results or past conversations. No exclamation marks, no buzzwords."
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "id": "d8ab2f51-eeb1-4d77-8ae7-3260af60d313",
+      "name": "Claude Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        1200,
+        528
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-haiku-5-5"
+        },
+        "options": {
+          "maxTokensToSample": 600
+        }
+      },
+      "credentials": {}
+    },
+    {
+      "id": "23782e01-42d5-4a19-82a3-74dff9cc125e",
+      "name": "Ask for Approval",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1472,
+        304
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendAndWait",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "lead-revival"
+        },
+        "message": "=*Re-engage {{ $('One Lead at a Time').item.json.properties.firstname }} {{ $('One Lead at a Time').item.json.properties.lastname || '' }}* ({{ $('One Lead at a Time').item.json.properties.company || 'no company' }}, {{ $('One Lead at a Time').item.json.properties.email }})\nSubject: Checking in, {{ $('One Lead at a Time').item.json.properties.firstname || 'there' }}\n\n{{ $json.text }}",
+        "responseType": "approval",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "Send it",
+            "disapproveLabel": "Skip"
+          }
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "limitType": "afterTimeInterval",
+              "resumeAmount": 24,
+              "resumeUnit": "hours"
+            }
+          },
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "id": "d1b069b1-c81e-4615-a69b-002af555a553",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1696,
+        304
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.data?.approved === true }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "68d7d68e-40cb-481d-9ac0-ea0ca35f7759",
+      "name": "Send Revival Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1920,
+        208
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('One Lead at a Time').item.json.properties.email }}",
+        "subject": "=Checking in, {{ $('One Lead at a Time').item.json.properties.firstname || 'there' }}",
+        "emailType": "html",
+        "message": "=<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;max-width:560px\"><p>Hi {{ $('One Lead at a Time').item.json.properties.firstname || 'there' }},</p>{{ $('Write Revival Email').item.json.text.trim().split(/\\n\\s*\\n/).map(p => '<p>' + p.replace(/\\n/g, '<br>') + '</p>').join('') }}<p>If it helps, you can grab a time here: <a href=\"{{ $('Revival Settings').first().json.bookingUrl }}\">book a call</a>.</p><p>Best,<br>{{ $('Revival Settings').first().json.senderName }}</p><p style=\"font-size:12px;color:#888\">Not interested? Just reply \"no thanks\" and we will not email again.</p></div>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "={{ $('Revival Settings').first().json.senderName }}"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "17050693-ab65-4921-9cf3-79b6d02c62e0",
+      "name": "Log Email in HubSpot",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        2144,
+        208
+      ],
+      "parameters": {
+        "resource": "engagement",
+        "operation": "create",
+        "authentication": "oAuth2",
+        "type": "email",
+        "metadata": {
+          "subject": "=Checking in, {{ $('One Lead at a Time').item.json.properties.firstname || 'there' }}",
+          "html": "={{ $('Write Revival Email').item.json.text }}",
+          "toEmail": [
+            "={{ $('One Lead at a Time').item.json.properties.email }}"
+          ]
+        },
+        "additionalFields": {
+          "associations": {
+            "contactIds": "={{ $('One Lead at a Time').item.json.id }}"
+          }
+        }
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "b22a3db5-b94b-452f-b00f-ac1f813cf6cc",
+      "name": "Mark Sent",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2368,
+        208
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "m1",
+              "name": "outcome",
+              "value": "sent",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "fccdb084-ad06-482f-b76b-4efa38dec50a",
+      "name": "Log Revival Attempt",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2592,
+        400
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Lead Revival Log"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $now.toISODate() }}",
+            "email": "={{ $('One Lead at a Time').item.json.properties.email }}",
+            "name": "={{ $('One Lead at a Time').item.json.properties.firstname }} {{ $('One Lead at a Time').item.json.properties.lastname || '' }}",
+            "company": "={{ $('One Lead at a Time').item.json.properties.company || '' }}",
+            "outcome": "={{ $json.outcome }}"
+          },
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "outcome",
+              "displayName": "outcome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "4f5e7201-5571-4a07-8e9f-d63a001638ab",
+      "name": "Mark Skipped",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2368,
+        400
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "m2",
+              "name": "outcome",
+              "value": "={{ $json.data?.approved === false ? \"declined\" : \"no response in 24h\" }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "9c9a611e-cd6a-4320-b8c9-2041a08dbb97",
+      "name": "One Lead at a Time",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        896,
+        304
+      ],
+      "parameters": {
+        "batchSize": 1
+      }
+    },
+    {
+      "id": "62c96124-18ba-4d1d-9a9d-65f2a0bfcf2e",
+      "name": "Reply Received",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        624
+      ],
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 15,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "simple": true,
+        "filters": {
+          "q": "subject:\"Re: Checking in\" is:unread in:inbox",
+          "readStatus": "unread"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "id": "7ad921b2-55d5-4cd9-b214-16ca1c30d3e1",
+      "name": "Alert Rep of Reply",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        224,
+        624
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "lead-revival"
+        },
+        "messageType": "text",
+        "text": "=:tada: *A revived lead replied*\nFrom: {{ $json.From }}\nSubject: {{ $json.Subject }}\n> {{ $json.snippet }}\nReply from your inbox while it is warm.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "3797726f-6920-4ffd-9cb2-da4e212808d0",
+      "name": "Mark Reply as Read",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        624
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "markAsRead",
+        "messageId": "={{ $('Reply Received').item.json.id }}"
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "942dbdc1-7348-4218-9096-bb4742c34f67",
+      "name": "On Workflow Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        944
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "4696aeda-a794-4b8b-8d3a-32b42b0ae2c9",
+      "name": "Format Error Details",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        944
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1",
+              "name": "failedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "e2",
+              "name": "workflow",
+              "value": "={{ $json.workflow?.name ?? \"unknown\" }}",
+              "type": "string"
+            },
+            {
+              "id": "e3",
+              "name": "failedNode",
+              "value": "={{ $json.execution?.lastNodeExecuted ?? \"unknown\" }}",
+              "type": "string"
+            },
+            {
+              "id": "e4",
+              "name": "errorMessage",
+              "value": "={{ ($json.execution?.error?.message ?? \"No message\").slice(0, 500) }}",
+              "type": "string"
+            },
+            {
+              "id": "e5",
+              "name": "executionUrl",
+              "value": "={{ $json.execution?.url ?? \"\" }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "f5dc36b8-34e6-427b-a37a-8cd12c519130",
+      "name": "Alert #automation-alerts",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        448,
+        848
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "automation-alerts"
+        },
+        "messageType": "text",
+        "text": "=:x: *{{ $json.workflow }} failed*\nNode: {{ $json.failedNode }}\nError: {{ $json.errorMessage }}\n<{{ $json.executionUrl }}|Open the failed run>",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "15c0583e-a004-4760-bba0-82fc3c3eb511",
+      "name": "Log to Error Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        1040
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Automation Error Log"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "b87ba9fb-364d-4eee-99bd-74fb1fb09794",
+      "name": "Sticky Note b87ba9fb",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -96
+      ],
+      "parameters": {
+        "content": "## Old Lead Revival\n\nEvery weekday morning it finds HubSpot leads with no activity for 90+ days (and not opted out), writes a short personal check-in with AI, and asks your team to approve each one in Slack before anything is sent. Approved emails go out from Gmail and are logged on the HubSpot contact, which also stops the same lead coming back tomorrow. When a lead replies, the rep is alerted.\n\n**Safety:** daily cap (default 15), human approval on every email, opt-out line in every email, unanswered approvals expire after 24h.\n\n**Setup**\n1. Edit **Revival Settings**\n2. Connect HubSpot, Anthropic, Slack, Gmail and Google Sheets\n3. Create `#lead-revival` and `#automation-alerts` in Slack",
+        "color": 7,
+        "width": 480,
+        "height": 500
+      }
+    },
+    {
+      "id": "816014f7-48d6-492b-8dd2-03cbc76347ac",
+      "name": "Sticky Note 816014f7",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        192,
+        208
+      ],
+      "parameters": {
+        "content": "### 1. Find cold leads\nLifecycle = lead, last activity older than the cutoff, not opted out. Oldest first, capped per day.",
+        "color": 4,
+        "width": 608,
+        "height": 224
+      }
+    },
+    {
+      "id": "b2878d24-75ad-475d-9426-9fb414113abf",
+      "name": "Sticky Note b2878d24",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        864,
+        -96
+      ],
+      "parameters": {
+        "content": "### 2. Draft, approve, send\nOne lead at a time: AI drafts, a person approves in Slack, then the email is sent and logged in HubSpot and the sheet.",
+        "color": 5,
+        "width": 1856,
+        "height": 624
+      }
+    },
+    {
+      "id": "6f38eac1-b4fa-44d5-96d4-d7663705076d",
+      "name": "Sticky Note 6f38eac1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        528
+      ],
+      "parameters": {
+        "content": "### 3. Reply alerts\nPolls Gmail for replies, alerts Slack, then marks the reply read so it is never alerted twice.",
+        "color": 6,
+        "width": 608,
+        "height": 224
+      }
+    },
+    {
+      "id": "e3168634-b9dc-4722-95cd-aa4f1f7f35cd",
+      "name": "Sticky Note e3168634",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        752
+      ],
+      "parameters": {
+        "content": "### Error handling\nAny failed run posts to #automation-alerts and is logged to the error sheet.",
+        "color": 2,
+        "width": 608,
+        "height": 416
+      }
+    }
+  ],
+  "connections": {
+    "Weekdays 9 AM": {
+      "main": [
+        [
+          {
+            "node": "Revival Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Revival Settings": {
+      "main": [
+        [
+          {
+            "node": "Find Cold Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Cold Leads": {
+      "main": [
+        [
+          {
+            "node": "Has Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Email": {
+      "main": [
+        [
+          {
+            "node": "One Lead at a Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Revival Email": {
+      "main": [
+        [
+          {
+            "node": "Ask for Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Write Revival Email",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask for Approval": {
+      "main": [
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Send Revival Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark Skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Revival Email": {
+      "main": [
+        [
+          {
+            "node": "Log Email in HubSpot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Email in HubSpot": {
+      "main": [
+        [
+          {
+            "node": "Mark Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Sent": {
+      "main": [
+        [
+          {
+            "node": "Log Revival Attempt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Revival Attempt": {
+      "main": [
+        [
+          {
+            "node": "One Lead at a Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Skipped": {
+      "main": [
+        [
+          {
+            "node": "Log Revival Attempt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One Lead at a Time": {
+      "main": [
+        [
+          {
+            "node": "Post Daily Summary",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Write Revival Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply Received": {
+      "main": [
+        [
+          {
+            "node": "Alert Rep of Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Rep of Reply": {
+      "main": [
+        [
+          {
+            "node": "Mark Reply as Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On Workflow Error": {
+      "main": [
+        [
+          {
+            "node": "Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error Details": {
+      "main": [
+        [
+          {
+            "node": "Alert #automation-alerts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log to Error Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

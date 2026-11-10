@@ -1,0 +1,800 @@
+{
+  "name": "Stale Deal Reminder",
+  "nodes": [
+    {
+      "id": "8e7a595c-25e4-42f6-9a3f-41fe8b861f82",
+      "name": "Weekdays 8 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        400
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ae9588ab-08b4-4d43-8232-490cc8d40d24",
+      "name": "Pipeline Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        400
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d1",
+              "name": "staleDays",
+              "value": 7,
+              "type": "number"
+            },
+            {
+              "id": "d2",
+              "name": "escalateDays",
+              "value": 14,
+              "type": "number"
+            },
+            {
+              "id": "d3",
+              "name": "staleCutoffMs",
+              "value": "={{ $now.minus(7, \"days\").toMillis() }}",
+              "type": "string"
+            },
+            {
+              "id": "d4",
+              "name": "hubspotPortalId",
+              "value": "0000000",
+              "type": "string"
+            },
+            {
+              "id": "d5",
+              "name": "closedStages",
+              "value": "closedwon,closedlost",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "470ce848-bae5-4752-b0d3-3287c96180f9",
+      "name": "Find Untouched Open Deals",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        400
+      ],
+      "parameters": {
+        "resource": "deal",
+        "operation": "search",
+        "authentication": "oAuth2",
+        "returnAll": true,
+        "filterGroupsUi": {
+          "filterGroupsValues": [
+            {
+              "filtersUi": {
+                "filterValues": [
+                  {
+                    "propertyName": "notes_last_updated|datetime",
+                    "operator": "LT",
+                    "value": "={{ $json.staleCutoffMs }}"
+                  },
+                  {
+                    "propertyName": "dealstage|enumeration",
+                    "operator": "NEQ",
+                    "value": "closedwon"
+                  },
+                  {
+                    "propertyName": "dealstage|enumeration",
+                    "operator": "NEQ",
+                    "value": "closedlost"
+                  }
+                ]
+              }
+            },
+            {
+              "filtersUi": {
+                "filterValues": [
+                  {
+                    "propertyName": "notes_last_updated|datetime",
+                    "operator": "NOT_HAS_PROPERTY"
+                  },
+                  {
+                    "propertyName": "createdate|datetime",
+                    "operator": "LT",
+                    "value": "={{ $json.staleCutoffMs }}"
+                  },
+                  {
+                    "propertyName": "hs_is_closed|bool",
+                    "operator": "NEQ",
+                    "value": "true"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "properties": [
+            "dealname",
+            "amount",
+            "dealstage",
+            "hubspot_owner_id",
+            "notes_last_updated",
+            "createdate",
+            "closedate",
+            "description"
+          ]
+        }
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "d43bd354-f16b-4438-8c91-54758cf89a05",
+      "name": "Get Deal Owners",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        672,
+        400
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.hubapi.com/crm/v3/owners?limit=500&archived=false",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotOAuth2Api",
+        "options": {}
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "fb994f18-ef12-42a0-a19f-d905ca0900e0",
+      "name": "Score Stale Deals",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        400
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const settings = $('Pipeline Settings').first().json;\nconst owners = $('Get Deal Owners').first().json.results ?? [];\nconst ownerById = Object.fromEntries(owners.map((o) => [String(o.id), o]));\nconst now = DateTime.now();\n\nreturn $('Find Untouched Open Deals').all().map(({ json }) => {\n  const p = json.properties ?? {};\n  const lastTouch = p.notes_last_updated || p.createdate;\n  const daysIdle = Math.floor(now.diff(DateTime.fromISO(lastTouch), 'days').days);\n  const owner = ownerById[String(p.hubspot_owner_id)] ?? null;\n  return {\n    json: {\n      dealId: json.id,\n      dealName: p.dealname || 'Untitled deal',\n      amount: Number(p.amount || 0),\n      stage: p.dealstage || 'unknown',\n      description: p.description || '',\n      closeDate: p.closedate ? DateTime.fromISO(p.closedate).toISODate() : '',\n      daysIdle,\n      ownerId: owner ? String(owner.id) : '',\n      ownerName: owner ? `${owner.firstName ?? ''} ${owner.lastName ?? ''}`.trim() || owner.email : 'Unassigned',\n      ownerEmail: owner?.email ?? '',\n      newlyStale: daysIdle >= settings.staleDays && daysIdle < settings.staleDays + 3,\n      escalate: daysIdle >= settings.escalateDays,\n      dealUrl: `https://app.hubspot.com/contacts/${settings.hubspotPortalId}/record/0-3/${json.id}`,\n    },\n  };\n}).filter((i) => i.json.daysIdle >= settings.staleDays);"
+      }
+    },
+    {
+      "id": "299ae630-0470-48b2-ab92-2110aa0941c2",
+      "name": "Suggest Next Step",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "=Deal: {{ $json.dealName }}\nStage: {{ $json.stage }}\nValue: ${{ $json.amount }}\nExpected close: {{ $json.closeDate || \"not set\" }}\nDays since last activity: {{ $json.daysIdle }}\nNotes: {{ $json.description || \"none\" }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "You are a sales coach. Reply with ONE concrete next step for the rep, max 18 words, starting with a verb. No preamble, no quotes. Do not invent facts about the client."
+            }
+          ]
+        },
+        "batching": {
+          "batchSize": 5,
+          "delayBetweenBatches": 500
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "caa0c0b2-d780-4b02-9de3-b574a841c712",
+      "name": "Claude Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        1200,
+        224
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-haiku-5-5"
+        },
+        "options": {
+          "maxTokensToSample": 120
+        }
+      },
+      "credentials": {}
+    },
+    {
+      "id": "a04295c1-0879-4d22-a025-fc75756cf66e",
+      "name": "Build Owner Digests",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        112
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const deals = $('Score Stale Deals').all().map((d) => d.json);\nconst steps = $input.all().map((i) => (i.json.text || '').trim());\nconst money = (n) => '$' + Number(n || 0).toLocaleString('en-US');\nconst byOwner = {};\n\ndeals.forEach((deal, idx) => {\n  const key = deal.ownerId || 'unassigned';\n  byOwner[key] = byOwner[key] ?? { ownerName: deal.ownerName, ownerEmail: deal.ownerEmail, deals: [] };\n  byOwner[key].deals.push({ ...deal, nextStep: steps[idx] || 'Review the deal and log the next action.' });\n});\n\nreturn Object.values(byOwner).map((group) => {\n  const sorted = group.deals.sort((a, b) => b.daysIdle - a.daysIdle);\n  const lines = sorted.map((d) => `${d.escalate ? ':red_circle:' : ':large_yellow_circle:'} <${d.dealUrl}|${d.dealName}> (${money(d.amount)}, ${d.daysIdle} days idle)\\n      Next step: ${d.nextStep}`);\n  return {\n    json: {\n      ownerName: group.ownerName,\n      ownerEmail: group.ownerEmail,\n      dealCount: sorted.length,\n      totalValue: money(sorted.reduce((s, d) => s + d.amount, 0)),\n      digest: lines.join('\\n'),\n    },\n  };\n});"
+      }
+    },
+    {
+      "id": "477c985b-44d6-45fc-9281-1842eb04adc7",
+      "name": "Post Owner Digest",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1696,
+        112
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "sales-team"
+        },
+        "messageType": "text",
+        "text": "=:hourglass_flowing_sand: *{{ $json.ownerName }}*, {{ $json.dealCount }} deal{{ $json.dealCount === 1 ? '' : 's' }} ({{ $json.totalValue }}) need a touch today:\n{{ $json.digest }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "edb7a763-14b6-4538-a1d2-a981d4d0f6f9",
+      "name": "Just Went Stale",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1184,
+        400
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.newlyStale }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "ea27ad67-715b-4f9f-8b6d-9d8f4c437abb",
+      "name": "Create Follow-up Task",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1472,
+        400
+      ],
+      "parameters": {
+        "resource": "engagement",
+        "operation": "create",
+        "authentication": "oAuth2",
+        "type": "task",
+        "dueDate": "={{ $now.plus(1, \"days\").set({ hour: 10, minute: 0 }).toFormat(\"yyyy-MM-dd HH:mm:ss\") }}",
+        "metadata": {
+          "subject": "=Follow up: {{ $json.dealName }} ({{ $json.daysIdle }} days idle)",
+          "body": "=No logged activity for {{ $json.daysIdle }} days. Log a call, email or meeting to clear this reminder.",
+          "status": "NOT_STARTED"
+        },
+        "additionalFields": {
+          "associations": {
+            "dealIds": "={{ $json.dealId }}",
+            "ownerId": "={{ Number($json.ownerId) || 0 }}"
+          }
+        }
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "7f859e29-462b-4cbf-82f9-e065890aa5df",
+      "name": "Idle 14+ Days",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1184,
+        592
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.escalate }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "1df1f406-b255-4c51-9b1c-98fde6a44184",
+      "name": "Alert Sales Manager",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1472,
+        592
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "sales-managers"
+        },
+        "messageType": "text",
+        "text": "=:rotating_light: *{{ $input.all().length }} deal{{ $input.all().length === 1 ? '' : 's' }} idle for {{ $('Pipeline Settings').first().json.escalateDays }}+ days* ({{ '$' + $input.all().reduce((s, i) => s + i.json.amount, 0).toLocaleString('en-US') }} at risk)\n{{ $input.all().sort((a, b) => b.json.daysIdle - a.json.daysIdle).map(i => '• <' + i.json.dealUrl + '|' + i.json.dealName + '>, ' + i.json.ownerName + ', ' + i.json.daysIdle + ' days').join('\\n') }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "executeOnce": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "cdaba3c5-8ab8-4910-88f3-34c5259f4bf2",
+      "name": "On Workflow Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        912
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "d6424009-c6e3-449d-941f-84497bd3371a",
+      "name": "Format Error Details",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        912
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1",
+              "name": "failedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "e2",
+              "name": "workflow",
+              "value": "={{ $json.workflow?.name ?? \"unknown\" }}",
+              "type": "string"
+            },
+            {
+              "id": "e3",
+              "name": "failedNode",
+              "value": "={{ $json.execution?.lastNodeExecuted ?? \"unknown\" }}",
+              "type": "string"
+            },
+            {
+              "id": "e4",
+              "name": "errorMessage",
+              "value": "={{ ($json.execution?.error?.message ?? \"No message\").slice(0, 500) }}",
+              "type": "string"
+            },
+            {
+              "id": "e5",
+              "name": "executionUrl",
+              "value": "={{ $json.execution?.url ?? \"\" }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "2b5c0e96-4a28-4d76-8b4e-769518b7fa1d",
+      "name": "Alert #automation-alerts",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        448,
+        816
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "automation-alerts"
+        },
+        "messageType": "text",
+        "text": "=:x: *{{ $json.workflow }} failed*\nNode: {{ $json.failedNode }}\nError: {{ $json.errorMessage }}\n<{{ $json.executionUrl }}|Open the failed run>",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "09175b3d-9c3b-4133-86ec-529e85de627a",
+      "name": "Log to Error Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        1008
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Automation Error Log"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "2fe91028-058c-4fac-8620-e69d590ef472",
+      "name": "Sticky Note 2fe91028",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -96
+      ],
+      "parameters": {
+        "content": "## Stale Deal Reminder\n\nEvery weekday morning it finds open HubSpot deals with no logged activity for 7+ days. Each rep gets a Slack digest of their idle deals with an AI-suggested next step, a follow-up task is created in HubSpot the first time a deal goes stale, and the sales manager gets one alert listing everything idle for 14+ days.\n\n**Setup**\n1. Adjust **Pipeline Settings** (thresholds, portal ID). Also change the 7-day value inside `staleCutoffMs` if you change `staleDays`\n2. Connect HubSpot, Anthropic and Slack (plus Google Sheets for the error log)\n3. Create `#sales-team`, `#sales-managers` and `#automation-alerts`",
+        "color": 7,
+        "width": 480,
+        "height": 460
+      }
+    },
+    {
+      "id": "69e7976d-8d5c-44df-8de4-08aa07e1e786",
+      "name": "Sticky Note 69e7976d",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        192,
+        304
+      ],
+      "parameters": {
+        "content": "### 1. Find idle deals\nOpen deals whose last activity (or creation date, if never touched) is older than the threshold. Owners are matched by ID.",
+        "color": 4,
+        "width": 832,
+        "height": 224
+      }
+    },
+    {
+      "id": "21133d1f-dcac-4fc2-a5e9-9a99c1450555",
+      "name": "Sticky Note 21133d1f",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1088,
+        -96
+      ],
+      "parameters": {
+        "content": "### 2. Rep digests\nOne AI next step per deal, grouped into one Slack message per owner, oldest first.",
+        "color": 5,
+        "width": 736,
+        "height": 336
+      }
+    },
+    {
+      "id": "d159737e-0c5d-44d7-bdae-03c75ef5cb12",
+      "name": "Sticky Note d159737e",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1152,
+        304
+      ],
+      "parameters": {
+        "content": "### 3. Tasks and escalation\nTask only when a deal first goes stale (no daily duplicates). Manager alert lists all 14+ day deals in one message.",
+        "color": 6,
+        "width": 448,
+        "height": 416
+      }
+    },
+    {
+      "id": "0c12d2b5-751c-47c8-bcb7-afb42b90440e",
+      "name": "Sticky Note 0c12d2b5",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        720
+      ],
+      "parameters": {
+        "content": "### Error handling\nAny failed run posts to #automation-alerts and is logged to the error sheet.",
+        "color": 2,
+        "width": 608,
+        "height": 416
+      }
+    }
+  ],
+  "connections": {
+    "Weekdays 8 AM": {
+      "main": [
+        [
+          {
+            "node": "Pipeline Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pipeline Settings": {
+      "main": [
+        [
+          {
+            "node": "Find Untouched Open Deals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Untouched Open Deals": {
+      "main": [
+        [
+          {
+            "node": "Get Deal Owners",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Deal Owners": {
+      "main": [
+        [
+          {
+            "node": "Score Stale Deals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Stale Deals": {
+      "main": [
+        [
+          {
+            "node": "Suggest Next Step",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Just Went Stale",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Idle 14+ Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suggest Next Step": {
+      "main": [
+        [
+          {
+            "node": "Build Owner Digests",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Suggest Next Step",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Owner Digests": {
+      "main": [
+        [
+          {
+            "node": "Post Owner Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Just Went Stale": {
+      "main": [
+        [
+          {
+            "node": "Create Follow-up Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Idle 14+ Days": {
+      "main": [
+        [
+          {
+            "node": "Alert Sales Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On Workflow Error": {
+      "main": [
+        [
+          {
+            "node": "Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error Details": {
+      "main": [
+        [
+          {
+            "node": "Alert #automation-alerts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log to Error Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

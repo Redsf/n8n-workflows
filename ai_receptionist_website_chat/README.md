@@ -43,32 +43,46 @@ Every workflow ships inactive with credential placeholders. Connect your own acc
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Website Chat<br/><small>chatTrigger</small>"]
-    N1["Business Profile<br/><small>set</small>"]
-    N2["AI Receptionist<br/><small>agent</small>"]
-    N3["Claude Model<br/><small>lmChatAnthropic</small>"]
-    N4["Conversation Memory<br/><small>memoryBufferWindow</small>"]
-    N5["Check Availability<br/><small>googleCalendarTool</small>"]
-    N6["Book Meeting<br/><small>googleCalendarTool</small>"]
-    N7["Save Lead to HubSpot<br/><small>hubspotTool</small>"]
-    N8["Hand Off to Human<br/><small>slackTool</small>"]
-    N9["Log Chat Message<br/><small>googleSheets</small>"]
-    N10["On Workflow Error<br/><small>errorTrigger</small>"]
-    N11["Format Error Details<br/><small>set</small>"]
-    N12["Alert #automation-alerts<br/><small>slack</small>"]
-    N13["Log to Error Sheet<br/><small>googleSheets</small>"]
+flowchart LR
+    subgraph G0 ["Website Chat"]
+        N0(["Website Chat<br/><small>chatTrigger</small>"])
+        N1["Business Profile<br/><small>set</small>"]
+        N2["AI Receptionist<br/><small>agent</small>"]
+        N3["Claude Model<br/><small>lmChatAnthropic</small>"]
+        N4["Conversation Memory<br/><small>memoryBufferWindow</small>"]
+        N5["Check Availability<br/><small>googleCalendarTool</small>"]
+        N6["Book Meeting<br/><small>googleCalendarTool</small>"]
+        N7["Save Lead to HubSpot<br/><small>hubspotTool</small>"]
+        N8["Hand Off to Human<br/><small>slackTool</small>"]
+        N9["Log Chat Message<br/><small>googleSheets</small>"]
+    end
+    subgraph G1 ["Error handling"]
+        N10(["On Workflow Error<br/><small>errorTrigger</small>"])
+        N11["Format Error Details<br/><small>set</small>"]
+        N12["Alert #automation-alerts<br/><small>slack</small>"]
+        N13["Log to Error Sheet<br/><small>googleSheets</small>"]
+    end
     N0 --> N1
     N0 --> N9
     N1 --> N2
-    N3 -.-> N2
-    N4 -.-> N2
-    N5 -.-> N2
-    N6 -.-> N2
-    N7 -.-> N2
-    N8 -.-> N2
     N10 --> N11
     N11 --> N12
     N11 --> N13
+    N3 -.languageModel.-> N2
+    N4 -.memory.-> N2
+    N5 -.tool.-> N2
+    N6 -.tool.-> N2
+    N7 -.tool.-> N2
+    N8 -.tool.-> N2
+
+    class N0 trigger
+    class N10 errorPath
+    class N3,N4,N5,N6,N7,N8 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

@@ -37,49 +37,65 @@ Every workflow ships inactive with credential placeholders. Connect your own acc
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Weekdays 9 AM<br/><small>scheduleTrigger</small>"]
-    N1["Revival Settings<br/><small>set</small>"]
-    N2["Find Cold Leads<br/><small>hubspot</small>"]
-    N3["Has Email<br/><small>filter</small>"]
-    N4["Post Daily Summary<br/><small>slack</small>"]
-    N5["Write Revival Email<br/><small>chainLlm</small>"]
-    N6["Claude Model<br/><small>lmChatAnthropic</small>"]
-    N7["Ask for Approval<br/><small>slack</small>"]
-    N8["Approved?<br/><small>if</small>"]
-    N9["Send Revival Email<br/><small>gmail</small>"]
-    N10["Log Email in HubSpot<br/><small>hubspot</small>"]
-    N11["Mark Sent<br/><small>set</small>"]
-    N12["Log Revival Attempt<br/><small>googleSheets</small>"]
-    N13["Mark Skipped<br/><small>set</small>"]
-    N14["One Lead at a Time<br/><small>splitInBatches</small>"]
-    N15["Reply Received<br/><small>gmailTrigger</small>"]
-    N16["Alert Rep of Reply<br/><small>slack</small>"]
-    N17["Mark Reply as Read<br/><small>gmail</small>"]
-    N18["On Workflow Error<br/><small>errorTrigger</small>"]
-    N19["Format Error Details<br/><small>set</small>"]
-    N20["Alert #automation-alerts<br/><small>slack</small>"]
-    N21["Log to Error Sheet<br/><small>googleSheets</small>"]
+flowchart LR
+    subgraph G0 ["Weekdays 9 AM"]
+        N0(["Weekdays 9 AM<br/><small>scheduleTrigger</small>"])
+        N1["Revival Settings<br/><small>set</small>"]
+        N2["Find Cold Leads<br/><small>hubspot</small>"]
+        N3{{"Has Email<br/><small>filter</small>"}}
+        N4["Post Daily Summary<br/><small>slack</small>"]
+        N5["Write Revival Email<br/><small>chainLlm</small>"]
+        N6["Claude Model<br/><small>lmChatAnthropic</small>"]
+        N7["Ask for Approval<br/><small>slack</small>"]
+        N8{{"Approved?<br/><small>if</small>"}}
+        N9["Send Revival Email<br/><small>gmail</small>"]
+        N10["Log Email in HubSpot<br/><small>hubspot</small>"]
+        N11["Mark Sent<br/><small>set</small>"]
+        N12["Log Revival Attempt<br/><small>googleSheets</small>"]
+        N13["Mark Skipped<br/><small>set</small>"]
+        N14["One Lead at a Time<br/><small>splitInBatches</small>"]
+    end
+    subgraph G1 ["Reply Received"]
+        N15(["Reply Received<br/><small>gmailTrigger</small>"])
+        N16["Alert Rep of Reply<br/><small>slack</small>"]
+        N17["Mark Reply as Read<br/><small>gmail</small>"]
+    end
+    subgraph G2 ["Error handling"]
+        N18(["On Workflow Error<br/><small>errorTrigger</small>"])
+        N19["Format Error Details<br/><small>set</small>"]
+        N20["Alert #automation-alerts<br/><small>slack</small>"]
+        N21["Log to Error Sheet<br/><small>googleSheets</small>"]
+    end
     N0 --> N1
     N1 --> N2
     N2 --> N3
     N3 --> N14
     N5 --> N7
-    N6 -.-> N5
     N7 --> N8
-    N8 --> N9
-    N8 --> N13
+    N8 -->|true| N9
+    N8 -->|false| N13
     N9 --> N10
     N10 --> N11
     N11 --> N12
     N12 --> N14
     N13 --> N12
-    N14 --> N4
-    N14 --> N5
+    N14 -->|done| N4
+    N14 -->|loop| N5
     N15 --> N16
     N16 --> N17
     N18 --> N19
     N19 --> N20
     N19 --> N21
+    N6 -.languageModel.-> N5
+
+    class N0,N15 trigger
+    class N18 errorPath
+    class N6 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

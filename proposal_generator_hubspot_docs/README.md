@@ -41,50 +41,63 @@ Every workflow ships inactive with credential placeholders. Connect your own acc
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Deal Reached Proposal<br/><small>webhook</small>"]
-    N1["Proposal Settings<br/><small>set</small>"]
-    N2["Get Deal and Associations<br/><small>httpRequest</small>"]
-    N3["Has Line Items and Contact?<br/><small>if</small>"]
-    N4["Get Line Items<br/><small>httpRequest</small>"]
-    N5["Get Primary Contact<br/><small>httpRequest</small>"]
-    N6["Build Proposal Data<br/><small>code</small>"]
-    N7["Contact Has Email?<br/><small>if</small>"]
-    N8["Copy Proposal Template<br/><small>googleDrive</small>"]
-    N9["Fill Placeholders<br/><small>googleDocs</small>"]
-    N10["Approve Proposal<br/><small>slack</small>"]
-    N11["Approved?<br/><small>if</small>"]
-    N12["Export as PDF<br/><small>googleDrive</small>"]
-    N13["Email Proposal<br/><small>gmail</small>"]
-    N14["Move Deal to Proposal Sent<br/><small>hubspot</small>"]
-    N15["Confirm Sent<br/><small>slack</small>"]
-    N16["Note Proposal on Hold<br/><small>slack</small>"]
-    N17["Ask for Contact Email<br/><small>slack</small>"]
-    N18["Ask Rep to Fix Deal<br/><small>slack</small>"]
-    N19["On Workflow Error<br/><small>errorTrigger</small>"]
-    N20["Format Error Details<br/><small>set</small>"]
-    N21["Alert #automation-alerts<br/><small>slack</small>"]
-    N22["Log to Error Sheet<br/><small>googleSheets</small>"]
+flowchart LR
+    subgraph G0 ["Deal Reached Proposal"]
+        N0(["Deal Reached Proposal<br/><small>webhook</small>"])
+        N1["Proposal Settings<br/><small>set</small>"]
+        N2["Get Deal and Associations<br/><small>httpRequest</small>"]
+        N3{{"Has Line Items and Contact?<br/><small>if</small>"}}
+        N4["Get Line Items<br/><small>httpRequest</small>"]
+        N5["Get Primary Contact<br/><small>httpRequest</small>"]
+        N6["Build Proposal Data<br/><small>code</small>"]
+        N7{{"Contact Has Email?<br/><small>if</small>"}}
+        N8["Copy Proposal Template<br/><small>googleDrive</small>"]
+        N9["Fill Placeholders<br/><small>googleDocs</small>"]
+        N10["Approve Proposal<br/><small>slack</small>"]
+        N11{{"Approved?<br/><small>if</small>"}}
+        N12["Export as PDF<br/><small>googleDrive</small>"]
+        N13["Email Proposal<br/><small>gmail</small>"]
+        N14["Move Deal to Proposal Sent<br/><small>hubspot</small>"]
+        N15["Confirm Sent<br/><small>slack</small>"]
+        N16["Note Proposal on Hold<br/><small>slack</small>"]
+        N17["Ask for Contact Email<br/><small>slack</small>"]
+        N18["Ask Rep to Fix Deal<br/><small>slack</small>"]
+    end
+    subgraph G1 ["Error handling"]
+        N19(["On Workflow Error<br/><small>errorTrigger</small>"])
+        N20["Format Error Details<br/><small>set</small>"]
+        N21["Alert #automation-alerts<br/><small>slack</small>"]
+        N22["Log to Error Sheet<br/><small>googleSheets</small>"]
+    end
     N0 --> N1
     N1 --> N2
     N2 --> N3
-    N3 --> N4
-    N3 --> N18
+    N3 -->|true| N4
+    N3 -->|false| N18
     N4 --> N5
     N5 --> N6
     N6 --> N7
-    N7 --> N8
-    N7 --> N17
+    N7 -->|true| N8
+    N7 -->|false| N17
     N8 --> N9
     N9 --> N10
     N10 --> N11
-    N11 --> N12
-    N11 --> N16
+    N11 -->|true| N12
+    N11 -->|false| N16
     N12 --> N13
     N13 --> N14
     N14 --> N15
     N19 --> N20
     N20 --> N21
     N20 --> N22
+
+    class N0 trigger
+    class N19 errorPath
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

@@ -36,24 +36,28 @@ Every workflow ships inactive with credential placeholders. Connect your own acc
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Weekdays 8 AM<br/><small>scheduleTrigger</small>"]
-    N1["Pipeline Settings<br/><small>set</small>"]
-    N2["Find Untouched Open Deals<br/><small>hubspot</small>"]
-    N3["Get Deal Owners<br/><small>httpRequest</small>"]
-    N4["Score Stale Deals<br/><small>code</small>"]
-    N5["Suggest Next Step<br/><small>chainLlm</small>"]
-    N6["Claude Model<br/><small>lmChatAnthropic</small>"]
-    N7["Build Owner Digests<br/><small>code</small>"]
-    N8["Post Owner Digest<br/><small>slack</small>"]
-    N9["Just Went Stale<br/><small>filter</small>"]
-    N10["Create Follow-up Task<br/><small>hubspot</small>"]
-    N11["Idle 14+ Days<br/><small>filter</small>"]
-    N12["Alert Sales Manager<br/><small>slack</small>"]
-    N13["On Workflow Error<br/><small>errorTrigger</small>"]
-    N14["Format Error Details<br/><small>set</small>"]
-    N15["Alert #automation-alerts<br/><small>slack</small>"]
-    N16["Log to Error Sheet<br/><small>googleSheets</small>"]
+flowchart LR
+    subgraph G0 ["Weekdays 8 AM"]
+        N0(["Weekdays 8 AM<br/><small>scheduleTrigger</small>"])
+        N1["Pipeline Settings<br/><small>set</small>"]
+        N2["Find Untouched Open Deals<br/><small>hubspot</small>"]
+        N3["Get Deal Owners<br/><small>httpRequest</small>"]
+        N4["Score Stale Deals<br/><small>code</small>"]
+        N5["Suggest Next Step<br/><small>chainLlm</small>"]
+        N6["Claude Model<br/><small>lmChatAnthropic</small>"]
+        N7["Build Owner Digests<br/><small>code</small>"]
+        N8["Post Owner Digest<br/><small>slack</small>"]
+        N9{{"Just Went Stale<br/><small>filter</small>"}}
+        N10["Create Follow-up Task<br/><small>hubspot</small>"]
+        N11{{"Idle 14+ Days<br/><small>filter</small>"}}
+        N12["Alert Sales Manager<br/><small>slack</small>"]
+    end
+    subgraph G1 ["Error handling"]
+        N13(["On Workflow Error<br/><small>errorTrigger</small>"])
+        N14["Format Error Details<br/><small>set</small>"]
+        N15["Alert #automation-alerts<br/><small>slack</small>"]
+        N16["Log to Error Sheet<br/><small>googleSheets</small>"]
+    end
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -62,12 +66,22 @@ flowchart TD
     N4 --> N9
     N4 --> N11
     N5 --> N7
-    N6 -.-> N5
     N7 --> N8
     N9 --> N10
     N11 --> N12
     N13 --> N14
     N14 --> N15
     N14 --> N16
+    N6 -.languageModel.-> N5
+
+    class N0 trigger
+    class N13 errorPath
+    class N6 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

@@ -1,5 +1,10 @@
 {
+  "id": "8IQWnpOzVRkFz3xB",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
   "name": "Old Lead Revival",
+  "tags": [],
   "nodes": [
     {
       "id": "c82b56dd-9f56-473e-becf-be2c08dfdece",
@@ -767,88 +772,16 @@
         }
       },
       "onError": "continueRegularOutput"
-    },
-    {
-      "id": "b87ba9fb-364d-4eee-99bd-74fb1fb09794",
-      "name": "Sticky Note b87ba9fb",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -560,
-        -96
-      ],
-      "parameters": {
-        "content": "## Old Lead Revival\n\nEvery weekday morning it finds HubSpot leads with no activity for 90+ days (and not opted out), writes a short personal check-in with AI, and asks your team to approve each one in Slack before anything is sent. Approved emails go out from Gmail and are logged on the HubSpot contact, which also stops the same lead coming back tomorrow. When a lead replies, the rep is alerted.\n\n**Safety:** daily cap (default 15), human approval on every email, opt-out line in every email, unanswered approvals expire after 24h.\n\n**Setup**\n1. Edit **Revival Settings**\n2. Connect HubSpot, Anthropic, Slack, Gmail and Google Sheets\n3. Create `#lead-revival` and `#automation-alerts` in Slack",
-        "color": 7,
-        "width": 480,
-        "height": 500
-      }
-    },
-    {
-      "id": "816014f7-48d6-492b-8dd2-03cbc76347ac",
-      "name": "Sticky Note 816014f7",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        192,
-        208
-      ],
-      "parameters": {
-        "content": "### 1. Find cold leads\nLifecycle = lead, last activity older than the cutoff, not opted out. Oldest first, capped per day.",
-        "color": 4,
-        "width": 608,
-        "height": 224
-      }
-    },
-    {
-      "id": "b2878d24-75ad-475d-9426-9fb414113abf",
-      "name": "Sticky Note b2878d24",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        864,
-        -96
-      ],
-      "parameters": {
-        "content": "### 2. Draft, approve, send\nOne lead at a time: AI drafts, a person approves in Slack, then the email is sent and logged in HubSpot and the sheet.",
-        "color": 5,
-        "width": 1856,
-        "height": 624
-      }
-    },
-    {
-      "id": "6f38eac1-b4fa-44d5-96d4-d7663705076d",
-      "name": "Sticky Note 6f38eac1",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -32,
-        528
-      ],
-      "parameters": {
-        "content": "### 3. Reply alerts\nPolls Gmail for replies, alerts Slack, then marks the reply read so it is never alerted twice.",
-        "color": 6,
-        "width": 608,
-        "height": 224
-      }
-    },
-    {
-      "id": "e3168634-b9dc-4722-95cd-aa4f1f7f35cd",
-      "name": "Sticky Note e3168634",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -32,
-        752
-      ],
-      "parameters": {
-        "content": "### Error handling\nAny failed run posts to #automation-alerts and is logged to the error sheet.",
-        "color": 2,
-        "width": 608,
-        "height": 416
-      }
     }
   ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1"
+  },
+  "versionId": "28db1ada-9061-41c8-8330-50bcee1e891c",
+  "nodeGroups": [],
   "connections": {
     "Weekdays 9 AM": {
       "main": [
@@ -1067,12 +1000,5 @@
         ]
       ]
     }
-  },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "pinData": {},
-  "meta": {
-    "templateCredsSetupCompleted": false
   }
 }

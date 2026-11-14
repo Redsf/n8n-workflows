@@ -10,12 +10,12 @@ Built for offices that miss calls while with clients: CPA firms in tax season, i
 
 ## What it does
 
-1. **Twilio Call Status** receives Twilio's status callback. **Business Settings** holds your name, booking link, number, time zone and opening hours.
-2. **Normalize Call** extracts the caller and works out whether the call came in during business hours. **Missed Call?** only lets no-answer, busy, failed and canceled calls continue. Twilio always gets an empty TwiML reply.
-3. **Find Caller in HubSpot** searches phone and mobile phone. **During Business Hours?** picks **Text Back (Open Hours)** or **Text Back (After Hours)**.
-4. **Known Contact?** creates a **Create Callback Task** (due in 30 minutes, or 9 AM next day after hours). **Alert Team** posts to `#missed-calls` either way, and **Log Missed Call** writes a sheet row.
-5. **Twilio Incoming SMS** catches replies. **Classify Reply** (Claude) sorts each one into urgent, wants to book, question, opt-out or other, and **Post Reply to Slack** shows it with a clear label.
-6. **On Workflow Error** posts any failure to `#automation-alerts` and logs it.
+1. **Twilio Call Status** (Webhook) receives Twilio's status callback, and **Business Settings** (Set) adds your name, booking link, number, time zone and opening hours.
+2. **Normalize Call** (Set) extracts the caller and works out whether the call came in during business hours. **Missed Call?** (If) only lets no-answer, busy, failed and canceled calls continue; **Acknowledge Missed Call** and **Acknowledge Answered Call** always send Twilio an empty TwiML reply.
+3. **Find Caller in HubSpot** (HubSpot) searches phone and mobile phone. **During Business Hours?** (If) picks **Text Back (Open Hours)** or **Text Back (After Hours)** (Twilio).
+4. **Known Contact?** (If) runs **Create Callback Task** (HubSpot), due in 30 minutes or 9 AM next day after hours. **Alert Team** (Slack) posts to `#missed-calls` either way, then **Build Call Log Row** (Set) and **Log Missed Call** (Google Sheets) record the call.
+5. **Twilio Incoming SMS** (Webhook) catches replies, **Acknowledge SMS** answers Twilio and **Normalize Reply** (Set) cleans the text. **Classify Reply** (Text Classifier with **Claude Model**) sorts each one into urgent, wants booking, question, opt-out or other, a **Tag** node labels it, and **Post Reply to Slack** (Slack) shows it.
+6. **On Workflow Error** (Error Trigger) feeds **Format Error Details**, which posts to `#automation-alerts` and writes a row to the error sheet.
 
 ## Sample request
 
@@ -29,14 +29,14 @@ curl -X POST https://YOUR-N8N/webhook/missed-call-reply \
   -d "From=+16195550142" -d "Body=Can someone call me about a tax notice? It is due Friday."
 ```
 
-## Setup
+## Setup (about 15 minutes)
 
-1. **Business Settings**: business name, booking link, Twilio number, IANA time zone, open and close hour.
-2. **Twilio console**: on your number set *Call status changes* to the `missed-call` URL and *A message comes in* to `missed-call-reply`.
-3. Connect **Twilio**, **HubSpot**, **Slack**, **Google Sheets** and **Anthropic**.
-4. Create `#missed-calls` and `#automation-alerts` in Slack.
-
-Every workflow ships inactive with credential placeholders. Connect your own accounts, run one test, then activate.
+1. **Business Settings** — set your business name, booking link, Twilio number, IANA time zone and open/close hours.
+2. **Twilio** — connect an account on both **Text Back** nodes. In the Twilio console, set *Call status changes* to the `missed-call` URL and *A message comes in* to `missed-call-reply`.
+3. **HubSpot** — connect an account on **Find Caller in HubSpot** and **Create Callback Task**.
+4. **Anthropic** — connect an account on **Claude Model**.
+5. **Slack** — connect an account on **Alert Team**, **Post Reply to Slack** and **Alert #automation-alerts**, and create `#missed-calls` and `#automation-alerts`.
+6. **Google Sheets** — connect an account on **Log Missed Call** and **Log to Error Sheet**, and replace the placeholder document IDs (`REPLACE_WITH_SPREADSHEET_ID`) with your own sheets.
 
 ---
 

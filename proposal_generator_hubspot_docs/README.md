@@ -10,12 +10,14 @@ Built for agencies, consultancies and accounting firms that rebuild the same pro
 
 ## What it does
 
-1. **Deal Reached Proposal** receives `dealId` from a HubSpot workflow webhook. **Proposal Settings** holds the template, output folder, sender and next stage ID.
-2. **Get Deal and Associations** calls the HubSpot API. **Has Line Items and Contact?** sends incomplete deals back to the rep via **Ask Rep to Fix Deal** instead of failing.
-3. **Get Line Items** and **Get Primary Contact** fetch the details. **Build Proposal Data** (Code) formats the line items, total, dates and file name. **Contact Has Email?** guards the send.
-4. **Copy Proposal Template** and **Fill Placeholders** create the client's document. **Approve Proposal** posts a link to the draft in `#proposals` and waits up to 3 days.
-5. Approved: **Export as PDF**, **Email Proposal** with the PDF attached, **Move Deal to Proposal Sent**, **Confirm Sent**. On hold: **Note Proposal on Hold** keeps the draft for manual sending.
-6. **On Workflow Error** posts any failure to `#automation-alerts` and logs it.
+1. **Deal Reached Proposal** (Webhook) receives `dealId` from a HubSpot workflow, and **Proposal Settings** (Set) holds the template, output folder, sender and next stage ID.
+2. **Get Deal and Associations** (HTTP Request) calls the HubSpot API. **Has Line Items and Contact?** (If) sends incomplete deals to **Ask Rep to Fix Deal** (Slack) instead of failing.
+3. **Get Line Items** and **Get Primary Contact** (HTTP Request) fetch the details, and **Build Proposal Data** (Code) formats the line items, total, dates and file name. **Contact Has Email?** (If) sends missing emails to **Ask for Contact Email** (Slack).
+4. **Copy Proposal Template** (Google Drive) and **Fill Placeholders** (Google Docs) create the client's document. **Approve Proposal** (Slack) posts the draft link to `#proposals` and waits up to 3 days.
+5. **Approved?** (If) splits two ways:
+   - Approved: **Export as PDF** (Google Drive), **Email Proposal** (Gmail) with the PDF attached, **Move Deal to Proposal Sent** (HubSpot) and **Confirm Sent** (Slack).
+   - On hold: **Note Proposal on Hold** (Slack) keeps the draft for manual sending.
+6. **On Workflow Error** (Error Trigger) feeds **Format Error Details**, which posts to `#automation-alerts` and writes a row to the error sheet.
 
 ## Sample request
 
@@ -26,14 +28,15 @@ curl -X POST https://YOUR-N8N/webhook/proposal-ready \
 
 Template placeholders: `{{client_name}}`, `{{client_company}}`, `{{deal_name}}`, `{{scope}}`, `{{line_items}}`, `{{total}}`, `{{proposal_date}}`, `{{valid_until}}`.
 
-## Setup
+## Setup (about 20 minutes)
 
-1. Create a Google Docs template with the placeholders above and a folder for finished proposals. Put both IDs in **Proposal Settings**.
-2. Set `sentStageId` to your pipeline's next stage ID and `hubspotPortalId` to your portal.
-3. In a HubSpot workflow (deal enters proposal stage), add *Send a webhook* with `dealId` to the `/proposal-ready` URL.
-4. Connect **HubSpot** (also on the three HTTP Request nodes), **Google Drive**, **Google Docs**, **Gmail** and **Slack**.
-
-Every workflow ships inactive with credential placeholders. Connect your own accounts, run one test, then activate.
+1. **Google Docs template** — create a template with the placeholders above and a folder for finished proposals, then put both IDs in **Proposal Settings**.
+2. **Proposal Settings** — set `sentStageId` to your pipeline's next stage ID and `hubspotPortalId` to your portal.
+3. **HubSpot** — connect an account on **Move Deal to Proposal Sent** and the three HTTP Request nodes. In a HubSpot workflow (deal enters proposal stage), add *Send a webhook* with `dealId` to the `/proposal-ready` URL.
+4. **Google Drive** and **Google Docs** — connect accounts on **Copy Proposal Template**, **Export as PDF** and **Fill Placeholders**.
+5. **Gmail** — connect an account on **Email Proposal**.
+6. **Slack** — connect an account on the Slack nodes and create `#proposals` and `#automation-alerts`.
+7. **Google Sheets** — connect an account on **Log to Error Sheet** and replace the placeholder document ID (`REPLACE_WITH_SPREADSHEET_ID`).
 
 ---
 

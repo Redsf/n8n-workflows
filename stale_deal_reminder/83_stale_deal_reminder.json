@@ -1,5 +1,10 @@
 {
+  "id": "ps6mvfVUdFtvojYj",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
   "name": "Stale Deal Reminder",
+  "tags": [],
   "nodes": [
     {
       "id": "8e7a595c-25e4-42f6-9a3f-41fe8b861f82",
@@ -559,88 +564,16 @@
         }
       },
       "onError": "continueRegularOutput"
-    },
-    {
-      "id": "2fe91028-058c-4fac-8620-e69d590ef472",
-      "name": "Sticky Note 2fe91028",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -560,
-        -96
-      ],
-      "parameters": {
-        "content": "## Stale Deal Reminder\n\nEvery weekday morning it finds open HubSpot deals with no logged activity for 7+ days. Each rep gets a Slack digest of their idle deals with an AI-suggested next step, a follow-up task is created in HubSpot the first time a deal goes stale, and the sales manager gets one alert listing everything idle for 14+ days.\n\n**Setup**\n1. Adjust **Pipeline Settings** (thresholds, portal ID). Also change the 7-day value inside `staleCutoffMs` if you change `staleDays`\n2. Connect HubSpot, Anthropic and Slack (plus Google Sheets for the error log)\n3. Create `#sales-team`, `#sales-managers` and `#automation-alerts`",
-        "color": 7,
-        "width": 480,
-        "height": 460
-      }
-    },
-    {
-      "id": "69e7976d-8d5c-44df-8de4-08aa07e1e786",
-      "name": "Sticky Note 69e7976d",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        192,
-        304
-      ],
-      "parameters": {
-        "content": "### 1. Find idle deals\nOpen deals whose last activity (or creation date, if never touched) is older than the threshold. Owners are matched by ID.",
-        "color": 4,
-        "width": 832,
-        "height": 224
-      }
-    },
-    {
-      "id": "21133d1f-dcac-4fc2-a5e9-9a99c1450555",
-      "name": "Sticky Note 21133d1f",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        1088,
-        -96
-      ],
-      "parameters": {
-        "content": "### 2. Rep digests\nOne AI next step per deal, grouped into one Slack message per owner, oldest first.",
-        "color": 5,
-        "width": 736,
-        "height": 336
-      }
-    },
-    {
-      "id": "d159737e-0c5d-44d7-bdae-03c75ef5cb12",
-      "name": "Sticky Note d159737e",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        1152,
-        304
-      ],
-      "parameters": {
-        "content": "### 3. Tasks and escalation\nTask only when a deal first goes stale (no daily duplicates). Manager alert lists all 14+ day deals in one message.",
-        "color": 6,
-        "width": 448,
-        "height": 416
-      }
-    },
-    {
-      "id": "0c12d2b5-751c-47c8-bcb7-afb42b90440e",
-      "name": "Sticky Note 0c12d2b5",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -32,
-        720
-      ],
-      "parameters": {
-        "content": "### Error handling\nAny failed run posts to #automation-alerts and is logged to the error sheet.",
-        "color": 2,
-        "width": 608,
-        "height": 416
-      }
     }
   ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1"
+  },
+  "versionId": "371bcfcf-fbb3-4a9a-b6f9-747d33e53442",
+  "nodeGroups": [],
   "connections": {
     "Weekdays 8 AM": {
       "main": [
@@ -789,12 +722,5 @@
         ]
       ]
     }
-  },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "pinData": {},
-  "meta": {
-    "templateCredsSetupCompleted": false
   }
 }

@@ -1,5 +1,10 @@
 {
+  "id": "ylJzHnCqOvQdkW15",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
   "name": "Speed-to-Lead Instant Response",
+  "tags": [],
   "nodes": [
     {
       "id": "11930d61-9add-452f-a8ab-4637f6918ac0",
@@ -777,88 +782,16 @@
         }
       },
       "onError": "continueRegularOutput"
-    },
-    {
-      "id": "5c29a36e-919a-44e4-8816-6d78c236192b",
-      "name": "Sticky Note 5c29a36e",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -560,
-        -96
-      ],
-      "parameters": {
-        "content": "## Speed-to-Lead Instant Response\n\nEvery new lead gets a text and an email with your booking link **within seconds**, the rep is pinged in Slack, and the contact lands in HubSpot. If nobody has booked or logged a call after 15 minutes, a call-now task is created and the team is nudged again.\n\n**Setup**\n1. Edit **Business Settings** (company name, booking link, Twilio number, HubSpot portal ID)\n2. Connect HubSpot, Gmail, Twilio, Slack and Google Sheets\n3. Create Slack channels `#new-leads` and `#automation-alerts`\n4. Point the two Sheets nodes at your log sheets\n5. POST leads to the webhook URL (see README for the payload)",
-        "color": 7,
-        "width": 480,
-        "height": 460
-      }
-    },
-    {
-      "id": "c0345236-9001-415f-999a-4da158bc1990",
-      "name": "Sticky Note c0345236",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -32,
-        96
-      ],
-      "parameters": {
-        "content": "### 1. Intake\nNormalize the payload, fix US phone numbers to +1 format, reject bad emails with a 400.",
-        "color": 4,
-        "width": 1056,
-        "height": 320
-      }
-    },
-    {
-      "id": "d16d8e8b-24e5-4211-9441-bf15b8949de6",
-      "name": "Sticky Note d16d8e8b",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        864,
-        -64
-      ],
-      "parameters": {
-        "content": "### 2. Instant first touch\nSave to HubSpot, then email, text (if a phone was given) and Slack. Each send retries 3 times and never blocks the others.",
-        "color": 5,
-        "width": 1728,
-        "height": 288
-      }
-    },
-    {
-      "id": "f12705c1-be68-422e-9093-aecca3b77e88",
-      "name": "Sticky Note f12705c1",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        2656,
-        -96
-      ],
-      "parameters": {
-        "content": "### 3. 15-minute safety net\nIf no meeting is booked and no call is logged, create a call-now task and escalate.",
-        "color": 3,
-        "width": 1056,
-        "height": 416
-      }
-    },
-    {
-      "id": "ebb3b750-bbb5-4a54-952e-be2cd49ed004",
-      "name": "Sticky Note ebb3b750",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -32,
-        416
-      ],
-      "parameters": {
-        "content": "### Error handling\nAny failed run posts to #automation-alerts and is logged to the error sheet.",
-        "color": 2,
-        "width": 608,
-        "height": 416
-      }
     }
   ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1"
+  },
+  "versionId": "622807cf-87f9-43cb-82df-ba1d1c11e9fb",
+  "nodeGroups": [],
   "connections": {
     "New Lead Webhook": {
       "main": [
@@ -1084,12 +1017,5 @@
         ]
       ]
     }
-  },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "pinData": {},
-  "meta": {
-    "templateCredsSetupCompleted": false
   }
 }

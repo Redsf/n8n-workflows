@@ -10,11 +10,15 @@ Built for small service firms that want 24/7 lead capture and booking without pa
 
 ## What it does
 
-1. **Website Chat** (public n8n chat, streaming replies) receives each message. **Business Profile** adds name, time zone, bookable hours and an FAQ.
-2. **AI Receptionist** (Claude) answers with per-session **Conversation Memory** and four tools: **Check Availability**, **Book Meeting**, **Save Lead to HubSpot** and **Hand Off to Human**.
-3. Guardrails in the system prompt: answer only from the profile, never quote prices, no legal or tax advice, always check the exact slot and get a clear yes before booking.
-4. **Log Chat Message** records every visitor message on a parallel branch, so logging never slows or breaks the reply.
-5. **On Workflow Error** posts any failure to `#automation-alerts` and logs it.
+1. **Website Chat** (Chat Trigger, public with streaming replies) receives each message, and **Business Profile** (Set) adds your name, time zone, bookable hours and FAQ.
+2. **AI Receptionist** (AI Agent with **Claude Model**) answers using per-session **Conversation Memory** and four tools:
+   - **Check Availability** (Google Calendar) finds free slots.
+   - **Book Meeting** (Google Calendar) creates the event and invite.
+   - **Save Lead to HubSpot** (HubSpot) creates or updates the contact.
+   - **Hand Off to Human** (Slack) alerts `#website-chat` when the visitor wants a person or the agent is unsure.
+3. The system prompt keeps it safe: answer only from the profile, never quote prices, no legal or tax advice, check the exact slot and get a clear yes before booking.
+4. **Log Chat Message** (Google Sheets) records every visitor message on a parallel branch, so logging never slows or breaks the reply.
+5. **On Workflow Error** (Error Trigger) feeds **Format Error Details**, which posts to `#automation-alerts` and writes a row to the error sheet.
 
 ## Sample request
 
@@ -28,14 +32,15 @@ Open the hosted chat URL from the **Website Chat** node, or embed it on your sit
 </script>
 ```
 
-## Setup
+## Setup (about 15 minutes)
 
-1. **Business Profile**: replace the FAQ, hours and time zone with your own.
-2. Connect **Anthropic**, **Google Calendar** (pick your calendar in both calendar tools), **HubSpot**, **Slack** and **Google Sheets**.
-3. Create `#website-chat` and `#automation-alerts` in Slack.
-4. Activate the workflow, then embed the chat snippet above.
-
-Every workflow ships inactive with credential placeholders. Connect your own accounts, run one test, then activate.
+1. **Business Profile** — replace the FAQ, hours and time zone with your own.
+2. **Anthropic** — connect an account on **Claude Model**.
+3. **Google Calendar** — connect an account on **Check Availability** and **Book Meeting**, and pick your calendar in both (currently set to `primary`).
+4. **HubSpot** — connect an account on **Save Lead to HubSpot**.
+5. **Slack** — connect an account on **Hand Off to Human** and **Alert #automation-alerts**, and create `#website-chat` and `#automation-alerts`.
+6. **Google Sheets** — connect an account on **Log Chat Message** and **Log to Error Sheet**, and replace the placeholder document IDs (`REPLACE_WITH_SPREADSHEET_ID`) with your own sheets.
+7. Activate the workflow, then embed the chat snippet above.
 
 ---
 

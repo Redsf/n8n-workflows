@@ -10,13 +10,15 @@ Built for referral-driven firms (CPAs, advisors, agencies, contractors) that tra
 
 ## What it does
 
-1. **New Referral** receives the form. **Referral Settings** holds the sender and reward text. **Normalize Referral** cleans both emails.
-2. **Valid Referral?** requires both emails and blocks self-referrals (400 otherwise). **Confirm Referral** answers the form.
-3. **Find Referrer in HubSpot** looks up the referrer. **Save Referred Lead** upserts the new lead with `referred_by_email`.
-4. **Referrer in CRM?** decides whether **Thank the Referrer** emails them. **Log Referral** writes the row (status `referred`) and **Announce Referral** posts to `#referrals`.
-5. **Deal Won** receives the client's email from a HubSpot workflow. **Find Open Referral** looks for a row still marked `referred`.
-6. **Was a Referral?** runs **Ask Finance to Send Reward**, **Tell Referrer the Good News** and **Mark Reward Sent**, which changes the status so the reward cannot fire again.
-7. **On Workflow Error** posts any failure to `#automation-alerts` and logs it.
+1. **New Referral** (Webhook) receives the form, **Referral Settings** (Set) holds the sender and reward text and **Normalize Referral** (Set) cleans both emails.
+2. **Valid Referral?** (If) requires both emails and blocks self-referrals, sending bad ones to **Reject Invalid Referral** (400). **Confirm Referral** (Respond to Webhook) answers the form.
+3. **Find Referrer in HubSpot** (HubSpot) looks up the referrer and **Save Referred Lead** (HubSpot) upserts the new lead with `referred_by_email`.
+4. **Referrer in CRM?** (If) decides whether **Thank the Referrer** (Gmail) emails them. **Log Referral** (Google Sheets) writes the row with status `referred` and **Announce Referral** (Slack) posts to `#referrals`.
+5. **Deal Won** (Webhook) receives the client's email from a HubSpot workflow, **Won Deal Details** (Set) adds the reward text and **Find Open Referral** (Google Sheets) looks for a row still marked `referred`.
+6. **Was a Referral?** (If) splits two ways:
+   - Yes: **Ask Finance to Send Reward** (Slack), **Tell Referrer the Good News** (Gmail) and **Mark Reward Sent** (Google Sheets), which changes the status so the reward cannot fire twice.
+   - No: **Not a Referral Deal** ends the run.
+7. **On Workflow Error** (Error Trigger) feeds **Format Error Details**, which posts to `#automation-alerts` and writes a row to the error sheet.
 
 ## Sample request
 
@@ -30,14 +32,13 @@ curl -X POST https://YOUR-N8N/webhook/referral-deal-won \
   -d '{"contactEmail":"marcus@leewealth.com","dealName":"Lee Wealth - Onboarding automation","amount":"9000"}'
 ```
 
-## Setup
+## Setup (about 15 minutes)
 
-1. In HubSpot, create a contact property `referred_by_email` (single-line text).
-2. Create a **Referral Tracker** sheet with headers: `receivedAt, leadEmail, leadName, leadCompany, referrerEmail, referrerName, referrerInCrm, status, rewardedAt`.
-3. In a HubSpot workflow (deal closed won), send the primary contact's email to `/referral-deal-won`.
-4. Edit the reward text in **Referral Settings** and **Won Deal Details**, then connect **HubSpot**, **Gmail**, **Slack** and **Google Sheets**.
-
-Every workflow ships inactive with credential placeholders. Connect your own accounts, run one test, then activate.
+1. **HubSpot** — create a contact property `referred_by_email` (single-line text), then connect an account on **Find Referrer in HubSpot** and **Save Referred Lead**. In a HubSpot workflow (deal closed won), send the primary contact's email to `/referral-deal-won`.
+2. **Google Sheets** — create a **Referral Tracker** sheet with headers `receivedAt, leadEmail, leadName, leadCompany, referrerEmail, referrerName, referrerInCrm, status, rewardedAt`. Connect an account on **Log Referral**, **Find Open Referral**, **Mark Reward Sent** and **Log to Error Sheet**, and replace the placeholder document IDs (`REPLACE_WITH_SPREADSHEET_ID`).
+3. **Gmail** — connect an account on **Thank the Referrer** and **Tell Referrer the Good News**.
+4. **Slack** — connect an account on **Announce Referral**, **Ask Finance to Send Reward** and **Alert #automation-alerts**, and create `#referrals` and `#automation-alerts`.
+5. **Referral Settings** and **Won Deal Details** — edit the reward text.
 
 ---
 

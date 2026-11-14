@@ -1,5 +1,10 @@
 {
+  "id": "zsxt5H3ZljSl6f31",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
   "name": "Proposal Generator",
+  "tags": [],
   "nodes": [
     {
       "id": "1704b837-34e1-4429-832f-da4a4c9f3cc3",
@@ -802,88 +807,16 @@
         }
       },
       "onError": "continueRegularOutput"
-    },
-    {
-      "id": "566f22f1-dd9b-448c-944e-7399e19293f6",
-      "name": "Sticky Note 566f22f1",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -560,
-        -96
-      ],
-      "parameters": {
-        "content": "## Proposal Generator\n\nWhen a HubSpot deal reaches your proposal stage, this pulls the deal, its line items and the main contact, fills your Google Docs template, and posts the draft to Slack for review. After approval it emails the client a PDF and moves the deal to the next stage. Nothing reaches the client without a human yes.\n\n**Template placeholders:** `{{client_name}}`, `{{client_company}}`, `{{deal_name}}`, `{{scope}}`, `{{line_items}}`, `{{total}}`, `{{proposal_date}}`, `{{valid_until}}`\n\n**Setup**\n1. Create the template doc and output folder, put their IDs in **Proposal Settings**\n2. In a HubSpot workflow, send a webhook with `dealId` to `/proposal-ready` when a deal enters the proposal stage\n3. Connect HubSpot, Google Drive, Google Docs, Gmail and Slack\n4. Set `sentStageId` to your pipeline's next stage ID",
-        "color": 7,
-        "width": 480,
-        "height": 560
-      }
-    },
-    {
-      "id": "abf274ca-2d63-424f-af35-fa5cef5b93db",
-      "name": "Sticky Note abf274ca",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        192,
-        96
-      ],
-      "parameters": {
-        "content": "### 1. Gather deal data\nDeal, line items and primary contact from the HubSpot API. Missing data goes back to the rep instead of failing.",
-        "color": 4,
-        "width": 1728,
-        "height": 416
-      }
-    },
-    {
-      "id": "9c48e5b3-ace2-4c40-8e09-a010d607fc2c",
-      "name": "Sticky Note 9c48e5b3",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        1760,
-        0
-      ],
-      "parameters": {
-        "content": "### 2. Draft and approve\nCopy the template, fill every placeholder, then wait up to 3 days for a Slack approval.",
-        "color": 5,
-        "width": 832,
-        "height": 224
-      }
-    },
-    {
-      "id": "b13b9942-2426-4ff4-b42f-92248e0cddc5",
-      "name": "Sticky Note b13b9942",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        2656,
-        -96
-      ],
-      "parameters": {
-        "content": "### 3. Send and update CRM\nExport the final doc as PDF, email it, move the deal stage, confirm in Slack.",
-        "color": 6,
-        "width": 832,
-        "height": 416
-      }
-    },
-    {
-      "id": "7fbc3c47-0779-4ffe-b8fb-f80f1d86e35b",
-      "name": "Sticky Note 7fbc3c47",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -32,
-        512
-      ],
-      "parameters": {
-        "content": "### Error handling\nAny failed run posts to #automation-alerts and is logged to the error sheet.",
-        "color": 2,
-        "width": 608,
-        "height": 416
-      }
     }
   ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1"
+  },
+  "versionId": "df0795ed-c623-49b5-b727-1fd8b24dd47d",
+  "nodeGroups": [],
   "connections": {
     "Deal Reached Proposal": {
       "main": [
@@ -1098,12 +1031,5 @@
         ]
       ]
     }
-  },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "pinData": {},
-  "meta": {
-    "templateCredsSetupCompleted": false
   }
 }

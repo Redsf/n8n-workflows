@@ -1,5 +1,10 @@
 {
+  "id": "Co8zDQUcDifJOfl7",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
   "name": "Missed-Call Text Back",
+  "tags": [],
   "nodes": [
     {
       "id": "2daafcf8-2d97-4d8f-80df-fa63de3d696e",
@@ -970,88 +975,16 @@
         }
       },
       "onError": "continueRegularOutput"
-    },
-    {
-      "id": "19a878b7-91ef-415f-8b18-133c4bb63622",
-      "name": "Sticky Note 19a878b7",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -560,
-        -96
-      ],
-      "parameters": {
-        "content": "## Missed-Call Text Back\n\nWhen a call to your Twilio number goes unanswered, the caller gets a friendly text with your booking link within seconds. Wording changes for open hours and after hours. Known HubSpot contacts get a callback task; the team is alerted in Slack and every missed call is logged.\n\nWhen the caller texts back, AI sorts the reply (urgent, wants to book, question, opt-out, other) and posts it to Slack.\n\n**Setup**\n1. Edit **Business Settings** (name, booking link, Twilio number, time zone, opening hours)\n2. In Twilio, set the number's **Call status changes** URL to the `missed-call` webhook and the **A message comes in** URL to `missed-call-reply`\n3. Connect Twilio, HubSpot, Slack, Google Sheets and Anthropic\n4. Create `#missed-calls` and `#automation-alerts` in Slack",
-        "color": 7,
-        "width": 480,
-        "height": 520
-      }
-    },
-    {
-      "id": "bcfa0d37-ced9-4713-ab76-2ce53f340ad5",
-      "name": "Sticky Note bcfa0d37",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -32,
-        0
-      ],
-      "parameters": {
-        "content": "### 1. Detect the missed call\nOnly no-answer, busy, failed and canceled calls continue. Twilio always gets an empty TwiML reply.",
-        "color": 4,
-        "width": 1056,
-        "height": 416
-      }
-    },
-    {
-      "id": "5022256f-2973-413e-919f-e73f75d7706f",
-      "name": "Sticky Note 5022256f",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        1088,
-        -96
-      ],
-      "parameters": {
-        "content": "### 2. Text back and route\nLook the caller up in HubSpot, send the right text for the time of day, create a callback task for known contacts, alert Slack, log the call.",
-        "color": 5,
-        "width": 1728,
-        "height": 416
-      }
-    },
-    {
-      "id": "05d56c4d-c978-4013-815e-e047c53f261d",
-      "name": "Sticky Note 05d56c4d",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -32,
-        416
-      ],
-      "parameters": {
-        "content": "### 3. AI sorts text replies\nThe classifier picks one category and the reply is posted to Slack with a clear label.",
-        "color": 6,
-        "width": 1408,
-        "height": 992
-      }
-    },
-    {
-      "id": "faf9bb43-7c2a-4707-ba5a-27220fc7ccf7",
-      "name": "Sticky Note faf9bb43",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -32,
-        1408
-      ],
-      "parameters": {
-        "content": "### Error handling\nAny failed run posts to #automation-alerts and is logged to the error sheet.",
-        "color": 2,
-        "width": 608,
-        "height": 416
-      }
     }
   ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1"
+  },
+  "versionId": "7345d00b-4595-4fc4-b24b-e33f44d2bd63",
+  "nodeGroups": [],
   "connections": {
     "Twilio Call Status": {
       "main": [
@@ -1382,12 +1315,5 @@
         ]
       ]
     }
-  },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "pinData": {},
-  "meta": {
-    "templateCredsSetupCompleted": false
   }
 }

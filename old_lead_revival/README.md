@@ -10,26 +10,28 @@ Built for firms sitting on a CRM full of leads that went quiet, who want them re
 
 ## What it does
 
-1. **Weekdays 9 AM** starts the run. **Revival Settings** holds the sender, booking link, daily cap and cutoff.
-2. **Find Cold Leads** searches HubSpot for lifecycle = lead, last activity before the cutoff, not opted out, oldest first, up to the daily cap. **Has Email** drops anything without an address.
-3. **One Lead at a Time** loops: **Write Revival Email** (Claude) drafts a 60 to 110 word body from the lead's notes, then **Ask for Approval** posts it to `#lead-revival` with *Send it* / *Skip* buttons (expires after 24h).
-4. Approved: **Send Revival Email** (Gmail, with an opt-out line) and **Log Email in HubSpot**, which also resets the contact's activity date so it is not picked again tomorrow. Either way **Log Revival Attempt** writes the outcome to a sheet.
-5. **Post Daily Summary** reports how many were sent and skipped.
-6. **Reply Received** polls Gmail every 15 minutes for replies, **Alert Rep of Reply** posts them, and **Mark Reply as Read** stops double alerts.
-7. **On Workflow Error** posts any failure to `#automation-alerts` and logs it.
+1. **Weekdays 9 AM** (Schedule Trigger) starts the run, and **Revival Settings** (Set) holds the sender, booking link, daily cap and cutoff.
+2. **Find Cold Leads** (HubSpot) searches for lifecycle = lead, last activity before the cutoff, not opted out, oldest first, up to the daily cap. **Has Email** (Filter) drops anything without an address.
+3. **One Lead at a Time** (Loop Over Items) handles each lead:
+   - **Write Revival Email** (Basic LLM Chain with **Claude Model**) drafts a 60 to 110 word body from the lead's notes.
+   - **Ask for Approval** (Slack) posts it to `#lead-revival` with *Send it* / *Skip* buttons that expire after 24 hours.
+   - **Approved?** (If) runs **Send Revival Email** (Gmail, with an opt-out line), **Log Email in HubSpot** (HubSpot) and **Mark Sent**, or **Mark Skipped**. **Log Revival Attempt** (Google Sheets) writes the outcome either way.
+4. When the loop finishes, **Post Daily Summary** (Slack) reports how many were sent and skipped.
+5. **Reply Received** (Gmail Trigger) polls every 15 minutes for replies, **Alert Rep of Reply** (Slack) posts them and **Mark Reply as Read** (Gmail) stops double alerts.
+6. **On Workflow Error** (Error Trigger) feeds **Format Error Details**, which posts to `#automation-alerts` and writes a row to the error sheet.
 
 ## Sample request
 
-Not applicable: runs on a weekday schedule and reads from HubSpot.
+Not applicable — this workflow runs on a weekday schedule and reads from HubSpot rather than an inbound request.
 
-## Setup
+## Setup (about 15 minutes)
 
-1. **Revival Settings**: sender name, booking link, daily cap. Change the 90 in `cutoffMs` to adjust how cold a lead must be.
-2. Connect **HubSpot**, **Anthropic**, **Slack**, **Gmail** and **Google Sheets**.
-3. Create `#lead-revival` and `#automation-alerts` in Slack.
-4. Approvals run one at a time, so keep the daily cap small enough for your team to review each morning.
-
-Every workflow ships inactive with credential placeholders. Connect your own accounts, run one test, then activate.
+1. **Revival Settings** — set the sender name, booking link and daily cap. Change the 90 in `cutoffMs` to adjust how cold a lead must be.
+2. **HubSpot** — connect an account on **Find Cold Leads** and **Log Email in HubSpot**.
+3. **Anthropic** — connect an account on **Claude Model**.
+4. **Gmail** — connect an account on **Send Revival Email**, **Reply Received** and **Mark Reply as Read**.
+5. **Slack** — connect an account on **Ask for Approval**, **Post Daily Summary**, **Alert Rep of Reply** and **Alert #automation-alerts**, and create `#lead-revival` and `#automation-alerts`. Keep the daily cap small enough for your team to review each morning.
+6. **Google Sheets** — connect an account on **Log Revival Attempt** and **Log to Error Sheet**, and replace the placeholder document IDs (`REPLACE_WITH_SPREADSHEET_ID`) with your own sheets.
 
 ---
 

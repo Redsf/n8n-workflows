@@ -10,25 +10,26 @@ Built for small sales teams where deals quietly die because nobody noticed they 
 
 ## What it does
 
-1. **Weekdays 8 AM** starts the run. **Pipeline Settings** holds the stale and escalation thresholds.
-2. **Find Untouched Open Deals** searches HubSpot for open deals whose last activity (or creation date, if never touched) is older than the threshold. **Get Deal Owners** loads owner names once.
+1. **Weekdays 8 AM** (Schedule Trigger) starts the run, and **Pipeline Settings** (Set) holds the stale and escalation thresholds.
+2. **Find Untouched Open Deals** (HubSpot) searches for open deals whose last activity, or creation date if never touched, is older than the threshold. **Get Deal Owners** (HTTP Request) loads owner names once.
 3. **Score Stale Deals** (Code) computes days idle, matches owners and flags newly stale and escalated deals.
-4. **Suggest Next Step** (Claude) writes one concrete action per deal. **Build Owner Digests** groups them per owner and **Post Owner Digest** sends one message per rep to `#sales-team`.
-5. **Just Went Stale** keeps deals that crossed the threshold in the last 3 days, so **Create Follow-up Task** does not duplicate tasks daily.
-6. **Idle 14+ Days** feeds **Alert Sales Manager**, one message to `#sales-managers` with the value at risk.
-7. **On Workflow Error** posts any failure to `#automation-alerts` and logs it.
+4. From there the flow splits three ways:
+   - **Suggest Next Step** (Basic LLM Chain with **Claude Model**) writes one action per deal, **Build Owner Digests** (Code) groups them per owner and **Post Owner Digest** (Slack) sends one message per rep to `#sales-team`.
+   - **Just Went Stale** (Filter) keeps deals that crossed the threshold in the last 3 days, so **Create Follow-up Task** (HubSpot) does not duplicate tasks daily.
+   - **Idle 14+ Days** (Filter) feeds **Alert Sales Manager** (Slack), one message to `#sales-managers` with the value at risk.
+5. **On Workflow Error** (Error Trigger) feeds **Format Error Details**, which posts to `#automation-alerts` and writes a row to the error sheet.
 
 ## Sample request
 
-Not applicable: runs on a weekday schedule and reads from HubSpot.
+Not applicable — this workflow runs on a weekday schedule and reads from HubSpot rather than an inbound request.
 
-## Setup
+## Setup (about 10 minutes)
 
-1. **Pipeline Settings**: thresholds and portal ID. Keep the 7 in `staleCutoffMs` in line with `staleDays`.
-2. Connect **HubSpot** (also on **Get Deal Owners**), **Anthropic** and **Slack**, plus **Google Sheets** for the error log.
-3. Create `#sales-team`, `#sales-managers` and `#automation-alerts`.
-
-Every workflow ships inactive with credential placeholders. Connect your own accounts, run one test, then activate.
+1. **Pipeline Settings** — set the thresholds and portal ID. Keep the 7 in `staleCutoffMs` in line with `staleDays`.
+2. **HubSpot** — connect an account on **Find Untouched Open Deals**, **Get Deal Owners** and **Create Follow-up Task**.
+3. **Anthropic** — connect an account on **Claude Model**.
+4. **Slack** — connect an account on **Post Owner Digest**, **Alert Sales Manager** and **Alert #automation-alerts**, and create `#sales-team`, `#sales-managers` and `#automation-alerts`.
+5. **Google Sheets** — connect an account on **Log to Error Sheet** and replace the placeholder document ID (`REPLACE_WITH_SPREADSHEET_ID`).
 
 ---
 

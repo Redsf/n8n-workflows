@@ -1,5 +1,10 @@
 {
+  "id": "jBXOLzuemZYopKSj",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
   "name": "Referral Tracking & Rewards",
+  "tags": [],
   "nodes": [
     {
       "id": "10163b2c-6322-47b1-be6b-0f74b84bc569",
@@ -934,72 +939,16 @@
         }
       },
       "onError": "continueRegularOutput"
-    },
-    {
-      "id": "ccb5f574-c8cb-4f96-b547-70a6542f2e59",
-      "name": "Sticky Note ccb5f574",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -600,
-        -96
-      ],
-      "parameters": {
-        "content": "## Referral Tracking & Rewards\n\nTwo entry points:\n\n**New referral** (form or website): saves the new lead in HubSpot with `referred_by_email`, thanks the referrer by email if they are already in your CRM, logs the referral in a Google Sheet and announces it in Slack.\n\n**Deal won**: looks the client up in the referral sheet. If they were referred and not yet rewarded, finance is asked in Slack to send the reward, the referrer gets a thank-you email and the row is marked so nobody is rewarded twice.\n\n**Setup**\n1. Create a HubSpot contact property `referred_by_email` (single-line text)\n2. Create the **Referral Tracker** sheet with the headers listed in the README\n3. In a HubSpot workflow, send the contact email to `/referral-deal-won` when a deal is won\n4. Edit the reward text in both settings nodes, then connect HubSpot, Gmail, Slack and Google Sheets",
-        "color": 7,
-        "width": 500,
-        "height": 600
-      }
-    },
-    {
-      "id": "24b91568-1dee-4737-b813-50ec4c6901b5",
-      "name": "Sticky Note 24b91568",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        192,
-        -96
-      ],
-      "parameters": {
-        "content": "### 1. Capture the referral\nValidates both emails (and blocks self-referrals), saves the lead, thanks known referrers, logs and announces.",
-        "color": 4,
-        "width": 2176,
-        "height": 496
-      }
-    },
-    {
-      "id": "7970f1bd-0ea1-437a-b888-bf22cdda617e",
-      "name": "Sticky Note 7970f1bd",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -32,
-        400
-      ],
-      "parameters": {
-        "content": "### 2. Reward on closed-won\nOnly rows still marked `referred` match, so a second won deal never triggers a second reward.",
-        "color": 5,
-        "width": 1504,
-        "height": 416
-      }
-    },
-    {
-      "id": "af8bec3c-88f3-4bd6-a5fd-5e3627197c5f",
-      "name": "Sticky Note af8bec3c",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [
-        -32,
-        816
-      ],
-      "parameters": {
-        "content": "### Error handling\nAny failed run posts to #automation-alerts and is logged to the error sheet.",
-        "color": 2,
-        "width": 608,
-        "height": 416
-      }
     }
   ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1"
+  },
+  "versionId": "37ca513d-1c6b-4b33-9cbc-d3a5b336e155",
+  "nodeGroups": [],
   "connections": {
     "New Referral": {
       "main": [
@@ -1225,12 +1174,5 @@
         ]
       ]
     }
-  },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "pinData": {},
-  "meta": {
-    "templateCredsSetupCompleted": false
   }
 }

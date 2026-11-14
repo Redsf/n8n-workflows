@@ -44,49 +44,55 @@ Every workflow ships inactive with credential placeholders. Connect your own acc
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Twilio Call Status<br/><small>webhook</small>"]
-    N1["Business Settings<br/><small>set</small>"]
-    N2["Normalize Call<br/><small>set</small>"]
-    N3["Missed Call?<br/><small>if</small>"]
-    N4["Acknowledge Missed Call<br/><small>respondToWebhook</small>"]
-    N5["Find Caller in HubSpot<br/><small>hubspot</small>"]
-    N6["During Business Hours?<br/><small>if</small>"]
-    N7["Text Back (Open Hours)<br/><small>twilio</small>"]
-    N8["Known Contact?<br/><small>if</small>"]
-    N9["Text Back (After Hours)<br/><small>twilio</small>"]
-    N10["Acknowledge Answered Call<br/><small>respondToWebhook</small>"]
-    N11["Create Callback Task<br/><small>hubspot</small>"]
-    N12["Alert Team<br/><small>slack</small>"]
-    N13["Build Call Log Row<br/><small>set</small>"]
-    N14["Log Missed Call<br/><small>googleSheets</small>"]
-    N15["Twilio Incoming SMS<br/><small>webhook</small>"]
-    N16["Acknowledge SMS<br/><small>respondToWebhook</small>"]
-    N17["Normalize Reply<br/><small>set</small>"]
-    N18["Classify Reply<br/><small>textClassifier</small>"]
-    N19["Claude Model<br/><small>lmChatAnthropic</small>"]
-    N20["Tag: Urgent<br/><small>set</small>"]
-    N21["Post Reply to Slack<br/><small>slack</small>"]
-    N22["Tag: Wants Booking<br/><small>set</small>"]
-    N23["Tag: Question<br/><small>set</small>"]
-    N24["Tag: Opt Out<br/><small>set</small>"]
-    N25["Tag: Other<br/><small>set</small>"]
-    N26["On Workflow Error<br/><small>errorTrigger</small>"]
-    N27["Format Error Details<br/><small>set</small>"]
-    N28["Alert #automation-alerts<br/><small>slack</small>"]
-    N29["Log to Error Sheet<br/><small>googleSheets</small>"]
+flowchart LR
+    subgraph G0 ["Twilio Call Status / Acknowledge Missed Call / Acknowledge Answered Call"]
+        N0(["Twilio Call Status<br/><small>webhook</small>"])
+        N1["Business Settings<br/><small>set</small>"]
+        N2["Normalize Call<br/><small>set</small>"]
+        N3{{"Missed Call?<br/><small>if</small>"}}
+        N4(["Acknowledge Missed Call<br/><small>respondToWebhook</small>"])
+        N5["Find Caller in HubSpot<br/><small>hubspot</small>"]
+        N6{{"During Business Hours?<br/><small>if</small>"}}
+        N7["Text Back (Open Hours)<br/><small>twilio</small>"]
+        N8{{"Known Contact?<br/><small>if</small>"}}
+        N9["Text Back (After Hours)<br/><small>twilio</small>"]
+        N10(["Acknowledge Answered Call<br/><small>respondToWebhook</small>"])
+        N11["Create Callback Task<br/><small>hubspot</small>"]
+        N12["Alert Team<br/><small>slack</small>"]
+        N13["Build Call Log Row<br/><small>set</small>"]
+        N14["Log Missed Call<br/><small>googleSheets</small>"]
+    end
+    subgraph G1 ["Twilio Incoming SMS / Acknowledge SMS"]
+        N15(["Twilio Incoming SMS<br/><small>webhook</small>"])
+        N16(["Acknowledge SMS<br/><small>respondToWebhook</small>"])
+        N17["Normalize Reply<br/><small>set</small>"]
+        N18{{"Classify Reply<br/><small>textClassifier</small>"}}
+        N19["Claude Model<br/><small>lmChatAnthropic</small>"]
+        N20["Tag: Urgent<br/><small>set</small>"]
+        N21["Post Reply to Slack<br/><small>slack</small>"]
+        N22["Tag: Wants Booking<br/><small>set</small>"]
+        N23["Tag: Question<br/><small>set</small>"]
+        N24["Tag: Opt Out<br/><small>set</small>"]
+        N25["Tag: Other<br/><small>set</small>"]
+    end
+    subgraph G2 ["Error handling"]
+        N26(["On Workflow Error<br/><small>errorTrigger</small>"])
+        N27["Format Error Details<br/><small>set</small>"]
+        N28["Alert #automation-alerts<br/><small>slack</small>"]
+        N29["Log to Error Sheet<br/><small>googleSheets</small>"]
+    end
     N0 --> N1
     N1 --> N2
     N2 --> N3
-    N3 --> N4
-    N3 --> N10
+    N3 -->|true| N4
+    N3 -->|false| N10
     N4 --> N5
     N5 --> N6
-    N6 --> N7
-    N6 --> N9
+    N6 -->|true| N7
+    N6 -->|false| N9
     N7 --> N8
-    N8 --> N11
-    N8 --> N12
+    N8 -->|true| N11
+    N8 -->|false| N12
     N9 --> N8
     N11 --> N12
     N12 --> N13
@@ -94,12 +100,11 @@ flowchart TD
     N15 --> N16
     N16 --> N17
     N17 --> N18
-    N18 --> N20
-    N18 --> N22
-    N18 --> N23
-    N18 --> N24
-    N18 --> N25
-    N19 -.-> N18
+    N18 -->|urgent| N20
+    N18 -->|wants_booking| N22
+    N18 -->|question| N23
+    N18 -->|opt_out| N24
+    N18 -->|other| N25
     N20 --> N21
     N22 --> N21
     N23 --> N21
@@ -108,5 +113,16 @@ flowchart TD
     N26 --> N27
     N27 --> N28
     N27 --> N29
+    N19 -.languageModel.-> N18
+
+    class N0,N4,N10,N15,N16 trigger
+    class N26 errorPath
+    class N19 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

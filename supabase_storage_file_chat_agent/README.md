@@ -50,51 +50,64 @@ The agent will only see chunks that match the `file_id` metadata configured on *
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Get All files<br/><small>httpRequest</small>"]
-    N1["Default Data Loader<br/><small>documentDefaultDataLoader</small>"]
-    N2["Recursive Character Text Splitter<br/><small>textSplitterRecursiveCharacterTextSplitter</small>"]
-    N3["Extract Document PDF<br/><small>extractFromFile</small>"]
-    N4["Embeddings OpenAI<br/><small>embeddingsOpenAi</small>"]
-    N5["Create File record2<br/><small>supabase</small>"]
-    N6["If<br/><small>if</small>"]
-    N7["Get All Files<br/><small>supabase</small>"]
-    N8["Download<br/><small>httpRequest</small>"]
-    N9["Loop Over Items<br/><small>splitInBatches</small>"]
-    N10["When clicking ‘Test workflow’<br/><small>manualTrigger</small>"]
-    N11["Aggregate<br/><small>aggregate</small>"]
-    N12["When chat message received<br/><small>chatTrigger</small>"]
-    N13["OpenAI Chat Model1<br/><small>lmChatOpenAi</small>"]
-    N14["Embeddings OpenAI2<br/><small>embeddingsOpenAi</small>"]
-    N15["OpenAI Chat Model2<br/><small>lmChatOpenAi</small>"]
-    N16["Vector Store Tool1<br/><small>toolVectorStore</small>"]
-    N17["Switch<br/><small>switch</small>"]
-    N18["Insert into Supabase Vectorstore<br/><small>vectorStoreSupabase</small>"]
-    N19["Merge<br/><small>merge</small>"]
-    N20["AI Agent<br/><small>agent</small>"]
-    N21["Supabase Vector Store<br/><small>vectorStoreSupabase</small>"]
+flowchart LR
+    subgraph G0 ["When clicking ‘Test workflow’"]
+        N0["Get All files<br/><small>httpRequest</small>"]
+        N1["Default Data Loader<br/><small>documentDefaultDataLoader</small>"]
+        N2["Recursive Character Text Splitter<br/><small>textSplitterRecursiveCharacterTextSplitter</small>"]
+        N3["Extract Document PDF<br/><small>extractFromFile</small>"]
+        N4["Embeddings OpenAI<br/><small>embeddingsOpenAi</small>"]
+        N5["Create File record2<br/><small>supabase</small>"]
+        N6{{"If<br/><small>if</small>"}}
+        N7["Get All Files<br/><small>supabase</small>"]
+        N8["Download<br/><small>httpRequest</small>"]
+        N9["Loop Over Items<br/><small>splitInBatches</small>"]
+        N10(["When clicking ‘Test workflow’<br/><small>manualTrigger</small>"])
+        N11["Aggregate<br/><small>aggregate</small>"]
+        N17{{"Switch<br/><small>switch</small>"}}
+        N18["Insert into Supabase Vectorstore<br/><small>vectorStoreSupabase</small>"]
+        N19["Merge<br/><small>merge</small>"]
+    end
+    subgraph G1 ["When chat message received"]
+        N12(["When chat message received<br/><small>chatTrigger</small>"])
+        N13["OpenAI Chat Model1<br/><small>lmChatOpenAi</small>"]
+        N14["Embeddings OpenAI2<br/><small>embeddingsOpenAi</small>"]
+        N15["OpenAI Chat Model2<br/><small>lmChatOpenAi</small>"]
+        N16["Vector Store Tool1<br/><small>toolVectorStore</small>"]
+        N20["AI Agent<br/><small>agent</small>"]
+        N21["Supabase Vector Store<br/><small>vectorStoreSupabase</small>"]
+    end
     N6 -->|true| N8
     N6 -->|false| N9
     N19 --> N5
-    N17 -->|out0| N19
-    N17 -->|out1| N3
+    N17 -->|txt| N19
+    N17 -->|pdf| N3
     N8 --> N17
     N11 --> N0
     N7 --> N11
     N0 --> N9
-    N9 --> N6
+    N9 -->|loop| N6
+    N5 --> N18
+    N3 --> N19
+    N12 --> N20
+    N18 --> N9
+    N10 --> N7
     N4 -.embedding.-> N18
     N14 -.embedding.-> N21
     N13 -.languageModel.-> N20
     N15 -.languageModel.-> N16
     N16 -.tool.-> N20
-    N5 --> N18
     N1 -.document.-> N18
-    N3 --> N19
     N21 -.vectorStore.-> N16
-    N12 --> N20
-    N18 --> N9
     N2 -.textSplitter.-> N1
-    N10 --> N7
+
+    class N10,N12 trigger
+    class N1,N2,N4,N13,N14,N15,N16,N21 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

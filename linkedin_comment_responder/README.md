@@ -44,18 +44,22 @@ An **Error Trigger** captures any workflow failure and forwards it to **Slack Er
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Schedule Trigger<br/><small>scheduleTrigger</small>"]
-    N1["Fetch LinkedIn Comments<br/><small>httpRequest</small>"]
-    N2["Split Comments<br/><small>splitOut</small>"]
-    N3["Extract Comment Data<br/><small>set</small>"]
-    N4["Prepare Reply Data<br/><small>set</small>"]
-    N5["Post Reply to LinkedIn<br/><small>httpRequest</small>"]
-    N6["Log to Google Sheets<br/><small>googleSheets</small>"]
-    N7["Slack Error Alert<br/><small>httpRequest</small>"]
-    N8["Error Trigger<br/><small>errorTrigger</small>"]
-    N9["AI Agent<br/><small>agent</small>"]
-    N10["Groq Chat Model<br/><small>lmChatGroq</small>"]
+flowchart LR
+    subgraph G0 ["Schedule Trigger"]
+        N0(["Schedule Trigger<br/><small>scheduleTrigger</small>"])
+        N1["Fetch LinkedIn Comments<br/><small>httpRequest</small>"]
+        N2["Split Comments<br/><small>splitOut</small>"]
+        N3["Extract Comment Data<br/><small>set</small>"]
+        N4["Prepare Reply Data<br/><small>set</small>"]
+        N5["Post Reply to LinkedIn<br/><small>httpRequest</small>"]
+        N6["Log to Google Sheets<br/><small>googleSheets</small>"]
+        N9["AI Agent<br/><small>agent</small>"]
+        N10["Groq Chat Model<br/><small>lmChatGroq</small>"]
+    end
+    subgraph G1 ["Error handling"]
+        N7["Slack Error Alert<br/><small>httpRequest</small>"]
+        N8(["Error Trigger<br/><small>errorTrigger</small>"])
+    end
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -65,5 +69,15 @@ flowchart TD
     N8 --> N7
     N9 --> N4
     N10 -.languageModel.-> N9
+
+    class N0 trigger
+    class N8 errorPath
+    class N10 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

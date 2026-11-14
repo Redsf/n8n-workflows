@@ -52,40 +52,53 @@ Which email provider does the creator of Bitcoin use?
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["When clicking 'Execute Workflow'<br/><small>manualTrigger</small>"]
-    N1["Embeddings OpenAI<br/><small>embeddingsOpenAi</small>"]
-    N2["Default Data Loader<br/><small>documentDefaultDataLoader</small>"]
-    N3["Set file URL in Google Drive<br/><small>set</small>"]
-    N4["Add in metadata<br/><small>code</small>"]
-    N5["Download file<br/><small>googleDrive</small>"]
-    N6["Chat Trigger<br/><small>chatTrigger</small>"]
-    N7["Prepare chunks<br/><small>code</small>"]
-    N8["Embeddings OpenAI2<br/><small>embeddingsOpenAi</small>"]
-    N9["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
-    N10["Set max chunks to send to model<br/><small>set</small>"]
-    N11["Structured Output Parser<br/><small>outputParserStructured</small>"]
-    N12["Compose citations<br/><small>set</small>"]
-    N13["Generate response<br/><small>set</small>"]
-    N14["Answer the query based on chunks<br/><small>chainLlm</small>"]
-    N15["Get top chunks matching query<br/><small>vectorStorePinecone</small>"]
-    N16["Add to Pinecone vector store<br/><small>vectorStorePinecone</small>"]
-    N17["Recursive Character Text Splitter<br/><small>textSplitterRecursiveCharacterTextSplitter</small>"]
+flowchart LR
+    subgraph G0 ["When clicking &quot;Execute Workflow&quot;"]
+        N0(["When clicking &quot;Execute Workflow&quot;<br/><small>manualTrigger</small>"])
+        N1["Embeddings OpenAI<br/><small>embeddingsOpenAi</small>"]
+        N2["Default Data Loader<br/><small>documentDefaultDataLoader</small>"]
+        N3["Set file URL in Google Drive<br/><small>set</small>"]
+        N4["Add in metadata<br/><small>code</small>"]
+        N5["Download file<br/><small>googleDrive</small>"]
+        N16["Add to Pinecone vector store<br/><small>vectorStorePinecone</small>"]
+        N17["Recursive Character Text Splitter<br/><small>textSplitterRecursiveCharacterTextSplitter</small>"]
+    end
+    subgraph G1 ["Chat Trigger"]
+        N6(["Chat Trigger<br/><small>chatTrigger</small>"])
+        N7["Prepare chunks<br/><small>code</small>"]
+        N8["Embeddings OpenAI2<br/><small>embeddingsOpenAi</small>"]
+        N9["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
+        N10["Set max chunks to send to model<br/><small>set</small>"]
+        N11["Structured Output Parser<br/><small>outputParserStructured</small>"]
+        N12["Compose citations<br/><small>set</small>"]
+        N13["Generate response<br/><small>set</small>"]
+        N14["Answer the query based on chunks<br/><small>chainLlm</small>"]
+        N15["Get top chunks matching query<br/><small>vectorStorePinecone</small>"]
+    end
     N6 --> N10
     N5 --> N4
     N7 --> N14
     N4 --> N16
     N12 --> N13
-    N1 -.embedding.-> N16
-    N9 -.languageModel.-> N14
-    N8 -.embedding.-> N15
-    N2 -.document.-> N16
-    N11 -.outputParser.-> N14
     N3 --> N5
     N15 --> N7
     N10 --> N15
     N14 --> N12
     N0 --> N3
+    N1 -.embedding.-> N16
+    N9 -.languageModel.-> N14
+    N8 -.embedding.-> N15
+    N2 -.document.-> N16
+    N11 -.outputParser.-> N14
     N17 -.textSplitter.-> N2
+
+    class N0,N6 trigger
+    class N1,N2,N8,N9,N11,N17 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

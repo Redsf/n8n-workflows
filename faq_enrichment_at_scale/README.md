@@ -55,40 +55,50 @@ A row in `Categories` needs:
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["When clicking ‘Test workflow’<br/><small>manualTrigger</small>"]
-    N1["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
-    N2["Format QA Pair1<br/><small>set</small>"]
-    N3["For Each Question...1<br/><small>splitInBatches</small>"]
-    N4["Question to List1<br/><small>splitOut</small>"]
-    N5["Questions to Object...1<br/><small>aggregate</small>"]
-    N6["Format DisplayName + Questions1<br/><small>set</small>"]
-    N7["Create From Text<br/><small>googleDrive</small>"]
-    N8["Define Sheets<br/><small>set</small>"]
-    N9["Sheets To List...<br/><small>splitOut</small>"]
-    N10["Get Services<br/><small>googleSheets</small>"]
-    N11["Single Integration Cred-only<br/><small>set</small>"]
-    N12["Single Integration Native<br/><small>set</small>"]
-    N13["Categories<br/><small>set</small>"]
-    N14["For Each Sheet...<br/><small>splitInBatches</small>"]
-    N15["Execute Workflow Trigger<br/><small>executeWorkflowTrigger</small>"]
-    N16["Execute Workflow<br/><small>executeWorkflow</small>"]
-    N17["Prepare Job<br/><small>set</small>"]
-    N18["For Each Service...<br/><small>splitInBatches</small>"]
-    N19["Update Row Status<br/><small>googleSheets</small>"]
-    N20["Single Integration Non-native<br/><small>set</small>"]
-    N21["If has Data<br/><small>if</small>"]
-    N22["Needs AI Completion?1<br/><small>switch</small>"]
-    N23["Switch<br/><small>switch</small>"]
-    N24["Strapi<br/><small>strapi</small>"]
-    N25["Wordpress<br/><small>wordpress</small>"]
-    N26["Webflow<br/><small>webflow</small>"]
-    N27["HTTP Request<br/><small>httpRequest</small>"]
-    N28["AI Completion1<br/><small>chainLlm</small>"]
-    N23 -->|out0| N12
-    N23 -->|out1| N11
-    N23 -->|out2| N20
-    N23 -->|out3| N13
+flowchart LR
+    subgraph G0 ["When clicking ‘Test workflow’"]
+        N0(["When clicking ‘Test workflow’<br/><small>manualTrigger</small>"])
+        N8["Define Sheets<br/><small>set</small>"]
+        N9["Sheets To List...<br/><small>splitOut</small>"]
+        N10["Get Services<br/><small>googleSheets</small>"]
+        N14["For Each Sheet...<br/><small>splitInBatches</small>"]
+        N16["Execute Workflow<br/><small>executeWorkflow</small>"]
+        N17["Prepare Job<br/><small>set</small>"]
+        N18["For Each Service...<br/><small>splitInBatches</small>"]
+        N21{{"If has Data<br/><small>if</small>"}}
+    end
+    subgraph G1 ["Execute Workflow Trigger"]
+        N1["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
+        N2["Format QA Pair1<br/><small>set</small>"]
+        N3["For Each Question...1<br/><small>splitInBatches</small>"]
+        N4["Question to List1<br/><small>splitOut</small>"]
+        N5["Questions to Object...1<br/><small>aggregate</small>"]
+        N6["Format DisplayName + Questions1<br/><small>set</small>"]
+        N7["Create From Text<br/><small>googleDrive</small>"]
+        N11["Single Integration Cred-only<br/><small>set</small>"]
+        N12["Single Integration Native<br/><small>set</small>"]
+        N13["Categories<br/><small>set</small>"]
+        N15(["Execute Workflow Trigger<br/><small>executeWorkflowTrigger</small>"])
+        N19["Update Row Status<br/><small>googleSheets</small>"]
+        N20["Single Integration Non-native<br/><small>set</small>"]
+        N22{{"Needs AI Completion?1<br/><small>switch</small>"}}
+        N23{{"Switch<br/><small>switch</small>"}}
+        N24["Strapi<br/><small>strapi</small>"]
+        N28["AI Completion1<br/><small>chainLlm</small>"]
+    end
+    subgraph G2 ["Unwired node"]
+        N25["Wordpress<br/><small>wordpress</small>"]
+    end
+    subgraph G3 ["Unwired node"]
+        N26["Webflow<br/><small>webflow</small>"]
+    end
+    subgraph G4 ["Unwired node"]
+        N27["HTTP Request<br/><small>httpRequest</small>"]
+    end
+    N23 -->|Single - Native| N12
+    N23 -->|Single - Cred Only| N11
+    N23 -->|Single - Non Native| N20
+    N23 -->|Categories| N13
     N13 --> N4
     N21 -->|true| N16
     N21 -->|false| N18
@@ -99,17 +109,16 @@ flowchart TD
     N2 --> N3
     N7 --> N19
     N16 --> N18
-    N14 -->|0| N18
-    N14 -->|1| N10
-    N1 -.languageModel.-> N28
+    N14 -->|done| N18
+    N14 -->|loop| N10
     N4 --> N3
     N9 --> N14
     N19 --> N24
-    N18 --> N21
-    N3 -->|0| N5
-    N3 -->|1| N22
-    N22 -->|out0| N2
-    N22 -->|out1| N28
+    N18 -->|loop| N21
+    N3 -->|done| N5
+    N3 -->|loop| N22
+    N22 -->|TEXT_REPLACE| N2
+    N22 -->|AI_COMPLETE| N28
     N5 --> N6
     N15 --> N23
     N12 --> N4
@@ -117,5 +126,15 @@ flowchart TD
     N20 --> N4
     N6 --> N7
     N0 --> N8
+    N1 -.languageModel.-> N28
+
+    class N0,N15 trigger
+    class N1 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

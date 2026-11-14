@@ -755,7 +755,7 @@
     },
     {
       "id": "a033d12b-524f-40e8-9208-5300bbc823d3",
-      "name": "Check status of post ",
+      "name": "Check status of post",
       "type": "n8n-nodes-base.facebookGraphApi",
       "position": [
         1800,
@@ -976,7 +976,7 @@
         ]
       ]
     },
-    "Check status of post ": {
+    "Check status of post": {
       "main": [
         [
           {
@@ -1035,7 +1035,7 @@
       "main": [
         [
           {
-            "node": "Check status of post ",
+            "node": "Check status of post",
             "type": "main",
             "index": 0
           }

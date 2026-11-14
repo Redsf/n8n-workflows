@@ -57,50 +57,54 @@ For the field-created/updated path, `field` carries the schema entry driving the
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Event Type<br/><small>switch</small>"]
-    N1["Get Prompt Fields<br/><small>code</small>"]
-    N2["Get File Data<br/><small>httpRequest</small>"]
-    N3["Extract from File<br/><small>extractFromFile</small>"]
-    N4["Get Result<br/><small>set</small>"]
-    N5["Loop Over Items<br/><small>splitInBatches</small>"]
-    N6["Row Reference<br/><small>noOp</small>"]
-    N7["Generate Field Value<br/><small>chainLlm</small>"]
-    N8["Fields to Update<br/><small>code</small>"]
-    N9["Loop Over Items1<br/><small>splitInBatches</small>"]
-    N10["Row Ref<br/><small>noOp</small>"]
-    N11["Get File Data1<br/><small>httpRequest</small>"]
-    N12["Extract from File1<br/><small>extractFromFile</small>"]
-    N13["Get Result1<br/><small>set</small>"]
-    N14["Generate Field Value1<br/><small>chainLlm</small>"]
-    N15["Filter Valid Rows<br/><small>filter</small>"]
-    N16["Filter Valid Fields<br/><small>filter</small>"]
-    N17["Event Ref<br/><small>noOp</small>"]
-    N18["Event Ref1<br/><small>noOp</small>"]
-    N19["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
-    N20["OpenAI Chat Model1<br/><small>lmChatOpenAi</small>"]
-    N21["Get Webhook Payload<br/><small>httpRequest</small>"]
-    N22["Parse Event<br/><small>code</small>"]
-    N23["Get Table Schema<br/><small>airtable</small>"]
-    N24["Fetch Records<br/><small>airtable</small>"]
-    N25["Update Row<br/><small>airtable</small>"]
-    N26["Get Row<br/><small>airtable</small>"]
-    N27["Add Row ID to Payload<br/><small>set</small>"]
-    N28["Update Record<br/><small>airtable</small>"]
-    N29["Airtable Webhook<br/><small>webhook</small>"]
-    N30["When clicking ‘Test workflow’<br/><small>manualTrigger</small>"]
-    N31["Set Airtable Vars<br/><small>set</small>"]
-    N32["Get Table Schema1<br/><small>airtable</small>"]
-    N33["Get 'Input' Field<br/><small>set</small>"]
-    N34["RecordsChanged Webhook<br/><small>httpRequest</small>"]
-    N35["FieldsChanged Webhook<br/><small>httpRequest</small>"]
+flowchart LR
+    subgraph G0 ["Airtable Webhook"]
+        N0{{"Event Type<br/><small>switch</small>"}}
+        N1["Get Prompt Fields<br/><small>code</small>"]
+        N2["Get File Data<br/><small>httpRequest</small>"]
+        N3["Extract from File<br/><small>extractFromFile</small>"]
+        N4["Get Result<br/><small>set</small>"]
+        N5["Loop Over Items<br/><small>splitInBatches</small>"]
+        N6["Row Reference<br/><small>noOp</small>"]
+        N7["Generate Field Value<br/><small>chainLlm</small>"]
+        N8["Fields to Update<br/><small>code</small>"]
+        N9["Loop Over Items1<br/><small>splitInBatches</small>"]
+        N10["Row Ref<br/><small>noOp</small>"]
+        N11["Get File Data1<br/><small>httpRequest</small>"]
+        N12["Extract from File1<br/><small>extractFromFile</small>"]
+        N13["Get Result1<br/><small>set</small>"]
+        N14["Generate Field Value1<br/><small>chainLlm</small>"]
+        N15{{"Filter Valid Rows<br/><small>filter</small>"}}
+        N16{{"Filter Valid Fields<br/><small>filter</small>"}}
+        N17["Event Ref<br/><small>noOp</small>"]
+        N18["Event Ref1<br/><small>noOp</small>"]
+        N19["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
+        N20["OpenAI Chat Model1<br/><small>lmChatOpenAi</small>"]
+        N21["Get Webhook Payload<br/><small>httpRequest</small>"]
+        N22["Parse Event<br/><small>code</small>"]
+        N23["Get Table Schema<br/><small>airtable</small>"]
+        N24["Fetch Records<br/><small>airtable</small>"]
+        N25["Update Row<br/><small>airtable</small>"]
+        N26["Get Row<br/><small>airtable</small>"]
+        N27["Add Row ID to Payload<br/><small>set</small>"]
+        N28["Update Record<br/><small>airtable</small>"]
+        N29(["Airtable Webhook<br/><small>webhook</small>"])
+    end
+    subgraph G1 ["When clicking ‘Test workflow’"]
+        N30(["When clicking ‘Test workflow’<br/><small>manualTrigger</small>"])
+        N31["Set Airtable Vars<br/><small>set</small>"]
+        N32["Get Table Schema1<br/><small>airtable</small>"]
+        N33["Get &quot;Input&quot; Field<br/><small>set</small>"]
+        N34["RecordsChanged Webhook<br/><small>httpRequest</small>"]
+        N35["FieldsChanged Webhook<br/><small>httpRequest</small>"]
+    end
     N26 --> N15
     N10 --> N11
     N17 --> N16
     N18 --> N26
-    N0 -->|out0| N18
-    N0 -->|out1| N17
-    N0 -->|out2| N17
+    N0 -->|row.updated| N18
+    N0 -->|field.created| N17
+    N0 -->|field.updated| N17
     N4 --> N25
     N25 --> N5
     N13 --> N27
@@ -110,26 +114,35 @@ flowchart TD
     N6 --> N2
     N28 --> N9
     N11 --> N12
-    N5 --> N6
+    N5 -->|loop| N6
     N29 --> N23
     N8 --> N14
     N23 --> N1
-    N9 --> N10
+    N9 -->|loop| N10
     N3 --> N7
     N15 --> N9
     N33 --> N34
     N1 --> N21
     N32 --> N33
-    N19 -.languageModel.-> N14
     N31 --> N32
     N31 --> N35
     N12 --> N8
-    N20 -.languageModel.-> N7
     N16 --> N24
     N21 --> N22
     N7 --> N4
     N27 --> N28
     N14 --> N13
     N30 --> N31
+    N19 -.languageModel.-> N14
+    N20 -.languageModel.-> N7
+
+    class N29,N30 trigger
+    class N19,N20 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

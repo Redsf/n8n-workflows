@@ -54,36 +54,50 @@ Send nodes retry up to three times before failing, and a dedicated Error Trigger
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Inbound Message Webhook<br/><small>webhook</small>"]
-    N1["Normalize Payload<br/><small>code</small>"]
-    N2["Guest Assistant Agent<br/><small>agent</small>"]
-    N3["GPT 4o mini<br/><small>lmChatOpenAi</small>"]
-    N4["Guest Conversation Memory<br/><small>memoryBufferWindow</small>"]
-    N5["Reply Structure Parser<br/><small>outputParserStructured</small>"]
-    N6["Needs Human?<br/><small>if</small>"]
-    N7["Notify Front Desk<br/><small>slack</small>"]
-    N8["Route By Channel<br/><small>switch</small>"]
-    N9["Send WhatsApp Reply<br/><small>httpRequest</small>"]
-    N10["Send Viber Reply<br/><small>httpRequest</small>"]
-    N11["Log Conversation<br/><small>googleSheets</small>"]
-    N12["Respond to Guest Gateway<br/><small>respondToWebhook</small>"]
-    N13["Error Trigger<br/><small>errorTrigger</small>"]
-    N14["Alert Engineering<br/><small>slack</small>"]
+flowchart LR
+    subgraph G0 ["Inbound Message Webhook / Respond to Guest Gateway"]
+        N0(["Inbound Message Webhook<br/><small>webhook</small>"])
+        N1["Normalize Payload<br/><small>code</small>"]
+        N2["Guest Assistant Agent<br/><small>agent</small>"]
+        N3["GPT 4o mini<br/><small>lmChatOpenAi</small>"]
+        N4["Guest Conversation Memory<br/><small>memoryBufferWindow</small>"]
+        N5["Reply Structure Parser<br/><small>outputParserStructured</small>"]
+        N6{{"Needs Human?<br/><small>if</small>"}}
+        N7["Notify Front Desk<br/><small>slack</small>"]
+        N8{{"Route By Channel<br/><small>switch</small>"}}
+        N9["Send WhatsApp Reply<br/><small>httpRequest</small>"]
+        N10["Send Viber Reply<br/><small>httpRequest</small>"]
+        N11["Log Conversation<br/><small>googleSheets</small>"]
+        N12(["Respond to Guest Gateway<br/><small>respondToWebhook</small>"])
+    end
+    subgraph G1 ["Error handling"]
+        N13(["Error Trigger<br/><small>errorTrigger</small>"])
+        N14["Alert Engineering<br/><small>slack</small>"]
+    end
     N0 --> N1
     N1 --> N2
-    N3 -.languageModel.-> N2
-    N4 -.memory.-> N2
-    N5 -.outputParser.-> N2
     N2 --> N6
     N6 -->|true| N7
     N6 -->|false| N8
     N7 --> N8
-    N8 -->|out0| N9
-    N8 -->|out1| N10
+    N8 -->|whatsapp| N9
+    N8 -->|viber| N10
     N9 --> N11
     N10 --> N11
     N11 --> N12
     N13 --> N14
+    N3 -.languageModel.-> N2
+    N4 -.memory.-> N2
+    N5 -.outputParser.-> N2
+
+    class N0,N12 trigger
+    class N13 errorPath
+    class N3,N4,N5 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

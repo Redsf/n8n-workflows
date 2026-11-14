@@ -39,13 +39,13 @@ Built for recruiters, job boards, and developers who want a structured, searchab
 
 ```mermaid
 flowchart TD
-    N0["When clicking 'Test workflow'<br/><small>manualTrigger</small>"]
+    N0(["When clicking 'Test workflow'<br/><small>manualTrigger</small>"])
     N1["Split Out<br/><small>splitOut</small>"]
     N2["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
     N3["Structured Output Parser<br/><small>outputParserStructured</small>"]
     N4["Search for Who is hiring posts<br/><small>httpRequest</small>"]
     N5["Get relevant data<br/><small>set</small>"]
-    N6["Get latest post<br/><small>filter</small>"]
+    N6{{"Get latest post<br/><small>filter</small>"}}
     N7["Split out children (jobs)<br/><small>splitOut</small>"]
     N8["Trun into structured data<br/><small>chainLlm</small>"]
     N9["Extract text<br/><small>set</small>"]
@@ -59,14 +59,23 @@ flowchart TD
     N9 --> N10
     N6 --> N14
     N5 --> N6
-    N2 -.languageModel.-> N8
     N14 --> N7
-    N3 -.outputParser.-> N8
     N7 --> N13
     N8 --> N12
     N11 --> N8
     N4 --> N1
     N0 --> N4
     N13 --> N9
+    N2 -.languageModel.-> N8
+    N3 -.outputParser.-> N8
+
+    class N0 trigger
+    class N2,N3 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

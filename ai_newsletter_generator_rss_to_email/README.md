@@ -62,7 +62,7 @@ flowchart TD
     N10["Limit<br/><small>limit</small>"]
     N11["memory<br/><small>code</small>"]
     N12["Groq Chat Model<br/><small>lmChatGroq</small>"]
-    N13["When clicking ‘Execute workflow’<br/><small>manualTrigger</small>"]
+    N13(["When clicking ‘Execute workflow’<br/><small>manualTrigger</small>"])
     N14["Next 3 Items<br/><small>noOp</small>"]
     N15["Extract Saved data<br/><small>code</small>"]
     N16["Edit Fields<br/><small>set</small>"]
@@ -79,12 +79,11 @@ flowchart TD
     N4 --> N0
     N6 --> N2
     N5 --> N19
-    N7 -->|0| N15
-    N7 -->|1| N5
+    N7 -->|done| N15
+    N7 -->|loop| N5
     N8 --> N11
     N10 --> N7
     N11 --> N14
-    N12 -.languageModel.-> N5
     N13 --> N4
     N13 --> N3
     N14 --> N7
@@ -93,8 +92,18 @@ flowchart TD
     N17 --> N18
     N18 --> N16
     N19 --> N8
-    N21 -.languageModel.-> N20
     N20 --> N22
     N22 --> N9
+    N12 -.languageModel.-> N5
+    N21 -.languageModel.-> N20
+
+    class N13 trigger
+    class N12,N21 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

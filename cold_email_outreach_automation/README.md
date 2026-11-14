@@ -48,31 +48,37 @@ An **Error Trigger** → **Slack Error Alert** pair exists on the canvas to post
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Get All Leads<br/><small>googleSheets</small>"]
-    N1["Process One Lead at a Time<br/><small>splitInBatches</small>"]
-    N2["Is Status Pending?<br/><small>if</small>"]
-    N3["Send Cold Email<br/><small>gmail</small>"]
-    N4["Update Lead - Email 1 Sent<br/><small>googleSheets</small>"]
-    N5["Check for Reply<br/><small>gmail</small>"]
-    N6["Update Lead - Replied<br/><small>googleSheets</small>"]
-    N7["Parse Follow-up Content<br/><small>code</small>"]
-    N8["Send Follow-up Email<br/><small>gmail</small>"]
-    N9["Update Lead - Follow-up Sent<br/><small>googleSheets</small>"]
-    N10["Error Trigger<br/><small>errorTrigger</small>"]
-    N11["Slack Error Alert<br/><small>slack</small>"]
-    N12["When clicking ‘Execute workflow’<br/><small>manualTrigger</small>"]
-    N13["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
-    N14["Parse Email Content<br/><small>code</small>"]
-    N15["Personalize   E-mail<br/><small>agent</small>"]
-    N16["Code in JavaScript<br/><small>code</small>"]
-    N17["Wait 2Mins<br/><small>wait</small>"]
-    N18["Generate Followup G-mail<br/><small>agent</small>"]
-    N19["OpenAI Chat Model1<br/><small>lmChatOpenAi</small>"]
-    N20["replied or not replied<br/><small>if</small>"]
+flowchart LR
+    subgraph G0 ["When clicking ‘Execute workflow’"]
+        N0["Get All Leads<br/><small>googleSheets</small>"]
+        N1["Process One Lead at a Time<br/><small>splitInBatches</small>"]
+        N2{{"Is Status Pending?<br/><small>if</small>"}}
+        N3["Send Cold Email<br/><small>gmail</small>"]
+        N4["Update Lead - Email 1 Sent<br/><small>googleSheets</small>"]
+        N5["Check for Reply<br/><small>gmail</small>"]
+        N6["Update Lead - Replied<br/><small>googleSheets</small>"]
+        N7["Parse Follow-up Content<br/><small>code</small>"]
+        N8["Send Follow-up Email<br/><small>gmail</small>"]
+        N9["Update Lead - Follow-up Sent<br/><small>googleSheets</small>"]
+        N12(["When clicking ‘Execute workflow’<br/><small>manualTrigger</small>"])
+        N13["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
+        N15["Personalize   E-mail<br/><small>agent</small>"]
+        N16["Code in JavaScript<br/><small>code</small>"]
+        N17["Wait 2Mins<br/><small>wait</small>"]
+        N18["Generate Followup G-mail<br/><small>agent</small>"]
+        N19["OpenAI Chat Model1<br/><small>lmChatOpenAi</small>"]
+        N20{{"replied or not replied<br/><small>if</small>"}}
+    end
+    subgraph G1 ["Error handling"]
+        N10(["Error Trigger<br/><small>errorTrigger</small>"])
+        N11["Slack Error Alert<br/><small>slack</small>"]
+    end
+    subgraph G2 ["Unwired node"]
+        N14["Parse Email Content<br/><small>code</small>"]
+    end
     N0 --> N1
-    N1 --> N2
-    N2 --> N15
+    N1 -->|loop| N2
+    N2 -->|true| N15
     N3 --> N4
     N4 --> N1
     N4 --> N17
@@ -81,13 +87,23 @@ flowchart TD
     N8 --> N9
     N10 --> N11
     N12 --> N0
-    N13 -.languageModel.-> N15
     N15 --> N16
     N16 --> N3
     N17 --> N5
     N18 --> N7
-    N19 -.languageModel.-> N18
     N20 -->|true| N6
     N20 -->|false| N18
+    N13 -.languageModel.-> N15
+    N19 -.languageModel.-> N18
+
+    class N10,N11,N14 disabled
+    class N12 trigger
+    class N13,N19 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

@@ -62,7 +62,7 @@ flowchart TD
     N2["Filter Unposted Items<br/><small>code</small>"]
     N3["Visit GH Page<br/><small>httpRequest</small>"]
     N4["Convert HTML To Markdown<br/><small>markdown</small>"]
-    N5["Filter Errored<br/><small>filter</small>"]
+    N5{{"Filter Errored<br/><small>filter</small>"}}
     N6["No Operation, do nothing<br/><small>noOp</small>"]
     N7["Update X Status<br/><small>airtable</small>"]
     N8["LinkedIn<br/><small>linkedIn</small>"]
@@ -71,7 +71,7 @@ flowchart TD
     N11["Create Item<br/><small>airtable</small>"]
     N12["X<br/><small>twitter</small>"]
     N13["Validate Generate Content<br/><small>code</small>"]
-    N14["Schedule Trigger<br/><small>scheduleTrigger</small>"]
+    N14(["Schedule Trigger<br/><small>scheduleTrigger</small>"])
     N15["Merge<br/><small>merge</small>"]
     N16["Generate Content<br/><small>openAi</small>"]
     N17["Ping Me<br/><small>telegram</small>"]
@@ -96,5 +96,13 @@ flowchart TD
     N13 --> N5
     N18 --> N12
     N18 --> N8
+
+    class N14 trigger
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

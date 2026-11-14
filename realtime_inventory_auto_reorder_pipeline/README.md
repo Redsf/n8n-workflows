@@ -42,37 +42,53 @@ An **Error Trigger** node captures any failure in the workflow and routes it to 
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["OpenAI — PO Model<br/><small>lmChatOpenAi</small>"]
-    N1["Error Trigger<br/><small>errorTrigger</small>"]
-    N2["🚨 Slack Error Alert<br/><small>slack</small>"]
-    N3["Slack — Send Purchase Order<br/><small>slack</small>"]
-    N4["Generate PO Message<br/><small>agent</small>"]
-    N5["Update Inventory — Reorder Triggered<br/><small>googleSheets</small>"]
-    N6["Log to Reorder Log Sheet<br/><small>googleSheets</small>"]
-    N7["Slack — Summary Report<br/><small>slack</small>"]
-    N8["Manual Trigger<br/><small>manualTrigger</small>"]
-    N9["Check Every 4 Hours<br/><small>scheduleTrigger</small>"]
-    N10["Process One Product at a Time<br/><small>splitInBatches</small>"]
-    N11["Calculate Stock Level & Urgency<br/><small>code</small>"]
-    N12["Update Last Checked Date<br/><small>googleSheets</small>"]
-    N13["Needs Reorder?<br/><small>if</small>"]
-    N14["Get Active Products<br/><small>googleSheets</small>"]
-    N15["Already Reordered Today?<br/><small>if</small>"]
-    N0 -.languageModel.-> N4
+flowchart LR
+    subgraph G0 ["Manual Trigger"]
+        N0["OpenAI — PO Model<br/><small>lmChatOpenAi</small>"]
+        N3["Slack — Send Purchase Order<br/><small>slack</small>"]
+        N4["Generate PO Message<br/><small>agent</small>"]
+        N5["Update Inventory — Reorder Triggered<br/><small>googleSheets</small>"]
+        N6["Log to Reorder Log Sheet<br/><small>googleSheets</small>"]
+        N7["Slack — Summary Report<br/><small>slack</small>"]
+        N8(["Manual Trigger<br/><small>manualTrigger</small>"])
+        N10["Process One Product at a Time<br/><small>splitInBatches</small>"]
+        N11["Calculate Stock Level &amp; Urgency<br/><small>code</small>"]
+        N12["Update Last Checked Date<br/><small>googleSheets</small>"]
+        N13{{"Needs Reorder?<br/><small>if</small>"}}
+        N14["Get Active Products<br/><small>googleSheets</small>"]
+        N15{{"Already Reordered Today?<br/><small>if</small>"}}
+    end
+    subgraph G1 ["Error handling"]
+        N1(["Error Trigger<br/><small>errorTrigger</small>"])
+        N2["🚨 Slack Error Alert<br/><small>slack</small>"]
+    end
+    subgraph G2 ["Check Every 4 Hours"]
+        N9(["Check Every 4 Hours<br/><small>scheduleTrigger</small>"])
+    end
     N1 --> N2
     N3 --> N5
     N4 --> N3
     N5 --> N6
     N6 --> N10
     N8 --> N14
-    N10 -->|0| N7
-    N10 -->|1| N11
+    N10 -->|done| N7
+    N10 -->|loop| N11
     N11 --> N12
     N12 --> N13
     N13 -->|true| N15
     N13 -->|false| N10
     N14 --> N10
     N15 --> N4
+    N0 -.languageModel.-> N4
+
+    class N1,N2,N9 disabled
+    class N8 trigger
+    class N0 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

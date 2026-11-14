@@ -48,44 +48,56 @@ A separate, disconnected **Error Handler** node exists in the workflow but has n
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["📂 Google Drive Trigger<br/><small>googleDriveTrigger</small>"]
-    N1["⬇️ Google Drive: Download File<br/><small>googleDrive</small>"]
-    N2["📁 Detect Doc Type From Folder<br/><small>code</small>"]
-    N3["🔍 Validate & Prepare Input<br/><small>code</small>"]
-    N4["🔄 Convert to Base64<br/><small>code</small>"]
-    N5["🧠 Build Classification Prompt<br/><small>code</small>"]
-    N6["🤖 GPT-4o: Classify Document<br/><small>openAi</small>"]
-    N7["📋 Parse Classification<br/><small>code</small>"]
-    N8["📝 Build Extraction Prompt<br/><small>code</small>"]
-    N9["🤖 GPT-4o: Extract Document Data<br/><small>openAi</small>"]
-    N10["✅ Parse & Validate Extraction<br/><small>code</small>"]
-    N11["⚠️ Quality Check Router<br/><small>if</small>"]
-    N12["📊 Google Sheets: Save Extraction<br/><small>googleSheets</small>"]
-    N13["🚨 Google Sheets: Flag for Review<br/><small>googleSheets</small>"]
-    N14["🔗 Merge Sheet Outputs<br/><small>merge</small>"]
-    N15["📋 Execution Log<br/><small>code</small>"]
-    N16["❌ Error Handler<br/><small>code</small>"]
-    N17["If<br/><small>if</small>"]
-    N18["Merge<br/><small>merge</small>"]
-    N0 --> N1
-    N1 --> N2
-    N2 --> N3
+flowchart LR
+    subgraph G0 ["Google Drive Trigger"]
+        N0{{"If<br/><small>if</small>"}}
+        N1["Merge<br/><small>merge</small>"]
+        N2{{"Quality Check Router<br/><small>if</small>"}}
+        N3(["Google Drive Trigger<br/><small>googleDriveTrigger</small>"])
+        N4["Google Drive: Download File<br/><small>googleDrive</small>"]
+        N5["Detect Doc Type From Folder<br/><small>code</small>"]
+        N6["Validate &amp; Prepare Input<br/><small>code</small>"]
+        N7["Convert to Base64<br/><small>code</small>"]
+        N8["Build Classification Prompt<br/><small>code</small>"]
+        N9["GPT-4o: Classify Document<br/><small>openAi</small>"]
+        N10["Parse Classification<br/><small>code</small>"]
+        N11["Build Extraction Prompt<br/><small>code</small>"]
+        N12["GPT-4o: Extract Document Data<br/><small>openAi</small>"]
+        N13["Parse &amp; Validate Extraction<br/><small>code</small>"]
+        N14["Google Sheets: Save Extraction<br/><small>googleSheets</small>"]
+        N15["Google Sheets: Flag for Review<br/><small>googleSheets</small>"]
+        N16["Merge Sheet Outputs<br/><small>merge</small>"]
+        N17["Execution Log<br/><small>code</small>"]
+    end
+    subgraph G1 ["Unwired node"]
+        N18["Error Handler<br/><small>code</small>"]
+    end
+    N0 -->|true| N1
+    N0 -->|false| N9
+    N1 --> N11
+    N2 -->|true| N14
+    N2 -->|false| N15
     N3 --> N4
     N4 --> N5
-    N5 --> N17
+    N5 --> N6
     N6 --> N7
-    N7 --> N18
-    N8 --> N9
+    N7 --> N8
+    N8 --> N0
     N9 --> N10
-    N10 --> N11
-    N11 -->|true| N12
-    N11 -->|false| N13
-    N12 --> N14
-    N13 --> N14
-    N14 --> N15
-    N17 -->|true| N18
-    N17 -->|false| N6
-    N18 --> N8
+    N10 --> N1
+    N11 --> N12
+    N12 --> N13
+    N13 --> N2
+    N14 --> N16
+    N15 --> N16
+    N16 --> N17
+
+    class N3 trigger
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

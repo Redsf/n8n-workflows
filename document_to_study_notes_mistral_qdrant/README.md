@@ -52,7 +52,7 @@ The `project` field comes from the path segment (`path.split('/').slice(0,4)[3]`
 
 ```mermaid
 flowchart TD
-    N0["Local File Trigger<br/><small>localFileTrigger</small>"]
+    N0(["Local File Trigger<br/><small>localFileTrigger</small>"])
     N1["Default Data Loader<br/><small>documentDefaultDataLoader</small>"]
     N2["Recursive Character Text Splitter<br/><small>textSplitterRecursiveCharacterTextSplitter</small>"]
     N3["Embeddings Mistral Cloud<br/><small>embeddingsMistralCloud</small>"]
@@ -79,7 +79,7 @@ flowchart TD
     N24["Prep For AI<br/><small>set</small>"]
     N25["To Binary<br/><small>convertToFile</small>"]
     N26["Export to Folder<br/><small>readWriteFile</small>"]
-    N27["Get FileType<br/><small>switch</small>"]
+    N27{{"Get FileType<br/><small>switch</small>"}}
     N28["Import File<br/><small>readWriteFile</small>"]
     N29["Extract from PDF<br/><small>extractFromFile</small>"]
     N30["Extract from DOCX<br/><small>extractFromFile</small>"]
@@ -98,9 +98,9 @@ flowchart TD
     N25 --> N26
     N28 --> N27
     N24 --> N9
-    N27 -->|out0| N29
-    N27 -->|out1| N30
-    N27 -->|out2| N31
+    N27 -->|pdf| N29
+    N27 -->|docx| N30
+    N27 -->|everything else| N31
     N9 --> N10
     N29 --> N6
     N30 --> N6
@@ -108,15 +108,15 @@ flowchart TD
     N6 --> N33
     N6 --> N32
     N0 --> N7
-    N1 -.document.-> N33
     N33 --> N8
     N10 --> N11
     N32 --> N8
-    N11 -->|0| N22
-    N11 -->|1| N34
+    N11 -->|done| N22
+    N11 -->|loop| N34
+    N22 --> N25
+    N1 -.document.-> N33
     N15 -.vectorStore.-> N13
     N13 -.retriever.-> N20
-    N22 --> N25
     N12 -.outputParser.-> N34
     N3 -.embedding.-> N33
     N4 -.languageModel.-> N34
@@ -125,5 +125,14 @@ flowchart TD
     N16 -.languageModel.-> N20
     N19 -.languageModel.-> N23
     N2 -.textSplitter.-> N1
+
+    class N0 trigger
+    class N1,N2,N3,N4,N5,N12,N13,N14,N15,N16,N19 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

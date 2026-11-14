@@ -41,7 +41,7 @@ Built for HR teams who want new-hire day-one communications handled automaticall
 
 ```mermaid
 flowchart TD
-    N0["Onboarding Form<br/><small>formTrigger</small>"]
+    N0(["Onboarding Form<br/><small>formTrigger</small>"])
     N1["Store Form Data<br/><small>code</small>"]
     N2["Generate AI Content<br/><small>lmChatGroq</small>"]
     N3["Welcome Email → New Hire<br/><small>gmail</small>"]
@@ -58,9 +58,7 @@ flowchart TD
     N14["Append row in sheet<br/><small>googleSheets</small>"]
     N15["HR team<br/><small>slack</small>"]
     N0 --> N1
-    N2 -.languageModel.-> N8
     N1 --> N8
-    N9 -.outputParser.-> N8
     N8 --> N11
     N10 --> N12
     N11 --> N10
@@ -73,5 +71,16 @@ flowchart TD
     N13 --> N7
     N13 --> N14
     N13 --> N15
+    N2 -.languageModel.-> N8
+    N9 -.outputParser.-> N8
+
+    class N0 trigger
+    class N2,N9 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

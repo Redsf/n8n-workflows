@@ -29,14 +29,22 @@ Built for restaurants, cafes and hospitality venues that want a fast heads-up on
 
 ```mermaid
 flowchart TD
-    N0["Every 6 Hours<br/><small>scheduleTrigger</small>"]
+    N0(["Every 6 Hours<br/><small>scheduleTrigger</small>"])
     N1["Fetch Latest Reviews<br/><small>httpRequest</small>"]
     N2["Filter Negative Reviews<br/><small>code</small>"]
-    N3["Any Negative Reviews<br/><small>if</small>"]
+    N3{{"Any Negative Reviews<br/><small>if</small>"}}
     N4["Alert Manager<br/><small>slack</small>"]
     N0 --> N1
     N3 --> N4
     N1 --> N2
     N2 --> N3
+
+    class N0 trigger
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

@@ -45,24 +45,33 @@ flowchart TD
     N2["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
     N3["JSON Parser<br/><small>outputParserStructured</small>"]
     N4["Map company name and website<br/><small>set</small>"]
-    N5["Execute workflow<br/><small>manualTrigger</small>"]
+    N5(["Execute workflow<br/><small>manualTrigger</small>"])
     N6["Get companies<br/><small>supabase</small>"]
     N7["Select company name and website<br/><small>set</small>"]
     N8["Set social media array<br/><small>set</small>"]
     N9["Merge all data<br/><small>merge</small>"]
     N10["Insert new row<br/><small>supabase</small>"]
     N11["Crawl website<br/><small>agent</small>"]
-    N0 -.tool.-> N11
-    N1 -.tool.-> N11
-    N3 -.outputParser.-> N11
     N11 --> N8
     N6 --> N7
     N9 --> N10
     N5 --> N6
-    N2 -.languageModel.-> N11
     N8 --> N9
     N4 --> N9
     N7 --> N11
     N7 --> N4
+    N0 -.tool.-> N11
+    N1 -.tool.-> N11
+    N3 -.outputParser.-> N11
+    N2 -.languageModel.-> N11
+
+    class N5 trigger
+    class N0,N1,N2,N3 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

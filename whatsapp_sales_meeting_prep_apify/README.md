@@ -59,58 +59,62 @@ The final WhatsApp message reads roughly like a friendly text: "Heads up — cal
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Get Message Contents<br/><small>gmail</small>"]
-    N1["Simplify Emails<br/><small>set</small>"]
-    N2["Check For Upcoming Meetings<br/><small>googleCalendar</small>"]
-    N3["OpenAI Chat Model2<br/><small>lmChatOpenAi</small>"]
-    N4["Extract Attendee Information<br/><small>informationExtractor</small>"]
-    N5["Execute Workflow Trigger<br/><small>executeWorkflowTrigger</small>"]
-    N6["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
-    N7["Get Last Correspondence<br/><small>gmail</small>"]
-    N8["OpenAI Chat Model1<br/><small>lmChatOpenAi</small>"]
-    N9["OpenAI Chat Model3<br/><small>lmChatOpenAi</small>"]
-    N10["WhatsApp Business Cloud<br/><small>whatsApp</small>"]
-    N11["Schedule Trigger<br/><small>scheduleTrigger</small>"]
-    N12["Return LinkedIn Success<br/><small>set</small>"]
-    N13["Return LinkedIn Error<br/><small>set</small>"]
-    N14["Return Email Error<br/><small>set</small>"]
-    N15["Return Email Success<br/><small>set</small>"]
-    N16["Set Route Email<br/><small>set</small>"]
-    N17["Set Route Linkedin<br/><small>set</small>"]
-    N18["Router<br/><small>switch</small>"]
-    N19["Return LinkedIn Error1<br/><small>set</small>"]
-    N20["Has Emails?<br/><small>if</small>"]
-    N21["Return Email Error1<br/><small>set</small>"]
-    N22["Sections To List<br/><small>splitOut</small>"]
-    N23["Set LinkedIn Cookie<br/><small>set</small>"]
-    N24["Attendees to List<br/><small>splitOut</small>"]
-    N25["Merge Attendee with Summaries<br/><small>set</small>"]
-    N26["Has Email Address?<br/><small>if</small>"]
-    N27["Has LinkedIn URL?<br/><small>if</small>"]
-    N28["Get Correspondance<br/><small>executeWorkflow</small>"]
-    N29["Merge<br/><small>merge</small>"]
-    N30["Aggregate Attendees<br/><small>aggregate</small>"]
-    N31["Activities To Array<br/><small>aggregate</small>"]
-    N32["Extract Profile Metadata<br/><small>html</small>"]
-    N33["Activities To List<br/><small>splitOut</small>"]
-    N34["APIFY Web Scraper<br/><small>httpRequest</small>"]
-    N35["Get Activity Details<br/><small>html</small>"]
-    N36["Get Sections<br/><small>html</small>"]
-    N37["Get About Section<br/><small>set</small>"]
-    N38["Get Activity Section<br/><small>set</small>"]
-    N39["Extract Activities<br/><small>html</small>"]
-    N40["Merge1<br/><small>merge</small>"]
-    N41["Is Scrape Successful?<br/><small>if</small>"]
-    N42["Extract About<br/><small>html</small>"]
-    N43["Get LinkedIn Profile & Activity<br/><small>executeWorkflow</small>"]
-    N44["Correspondance Recap Agent<br/><small>chainLlm</small>"]
-    N45["Attendee Research Agent<br/><small>chainLlm</small>"]
-    N46["LinkedIn Summarizer Agent<br/><small>chainLlm</small>"]
+flowchart LR
+    subgraph G0 ["Execute Workflow Trigger"]
+        N0["Get Message Contents<br/><small>gmail</small>"]
+        N1["Simplify Emails<br/><small>set</small>"]
+        N5(["Execute Workflow Trigger<br/><small>executeWorkflowTrigger</small>"])
+        N6["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
+        N7["Get Last Correspondence<br/><small>gmail</small>"]
+        N8["OpenAI Chat Model1<br/><small>lmChatOpenAi</small>"]
+        N12["Return LinkedIn Success<br/><small>set</small>"]
+        N13["Return LinkedIn Error<br/><small>set</small>"]
+        N14["Return Email Error<br/><small>set</small>"]
+        N15["Return Email Success<br/><small>set</small>"]
+        N18{{"Router<br/><small>switch</small>"}}
+        N19["Return LinkedIn Error1<br/><small>set</small>"]
+        N20{{"Has Emails?<br/><small>if</small>"}}
+        N21["Return Email Error1<br/><small>set</small>"]
+        N22["Sections To List<br/><small>splitOut</small>"]
+        N23["Set LinkedIn Cookie<br/><small>set</small>"]
+        N26{{"Has Email Address?<br/><small>if</small>"}}
+        N27{{"Has LinkedIn URL?<br/><small>if</small>"}}
+        N31["Activities To Array<br/><small>aggregate</small>"]
+        N32["Extract Profile Metadata<br/><small>html</small>"]
+        N33["Activities To List<br/><small>splitOut</small>"]
+        N34["APIFY Web Scraper<br/><small>httpRequest</small>"]
+        N35["Get Activity Details<br/><small>html</small>"]
+        N36["Get Sections<br/><small>html</small>"]
+        N37["Get About Section<br/><small>set</small>"]
+        N38["Get Activity Section<br/><small>set</small>"]
+        N39["Extract Activities<br/><small>html</small>"]
+        N40["Merge1<br/><small>merge</small>"]
+        N41{{"Is Scrape Successful?<br/><small>if</small>"}}
+        N42["Extract About<br/><small>html</small>"]
+        N44["Correspondance Recap Agent<br/><small>chainLlm</small>"]
+        N46["LinkedIn Summarizer Agent<br/><small>chainLlm</small>"]
+    end
+    subgraph G1 ["Schedule Trigger"]
+        N2["Check For Upcoming Meetings<br/><small>googleCalendar</small>"]
+        N3["OpenAI Chat Model2<br/><small>lmChatOpenAi</small>"]
+        N4["Extract Attendee Information<br/><small>informationExtractor</small>"]
+        N9["OpenAI Chat Model3<br/><small>lmChatOpenAi</small>"]
+        N10["WhatsApp Business Cloud<br/><small>whatsApp</small>"]
+        N11(["Schedule Trigger<br/><small>scheduleTrigger</small>"])
+        N16["Set Route Email<br/><small>set</small>"]
+        N17["Set Route Linkedin<br/><small>set</small>"]
+        N24["Attendees to List<br/><small>splitOut</small>"]
+        N25["Merge Attendee with Summaries<br/><small>set</small>"]
+        N28["Get Correspondance<br/><small>executeWorkflow</small>"]
+        N29["Merge<br/><small>merge</small>"]
+        N30["Aggregate Attendees<br/><small>aggregate</small>"]
+        N43["Get LinkedIn Profile &amp; Activity<br/><small>executeWorkflow</small>"]
+        N45["Attendee Research Agent<br/><small>chainLlm</small>"]
+    end
     N29 --> N25
     N40 --> N46
-    N18 -->|out0| N26
-    N18 -->|out1| N27
+    N18 -->|email| N26
+    N18 -->|linkedin| N27
     N20 -->|true| N0
     N20 -->|false| N14
     N36 --> N37
@@ -126,15 +130,11 @@ flowchart TD
     N37 --> N42
     N27 -->|true| N23
     N27 -->|false| N19
-    N6 -.languageModel.-> N44
     N33 --> N35
     N39 --> N33
     N28 --> N29
     N26 -->|true| N7
     N26 -->|false| N21
-    N8 -.languageModel.-> N46
-    N3 -.languageModel.-> N4
-    N9 -.languageModel.-> N45
     N17 --> N43
     N31 --> N40
     N30 --> N45
@@ -154,5 +154,18 @@ flowchart TD
     N4 --> N24
     N25 --> N30
     N43 --> N29
+    N6 -.languageModel.-> N44
+    N8 -.languageModel.-> N46
+    N3 -.languageModel.-> N4
+    N9 -.languageModel.-> N45
+
+    class N5,N11 trigger
+    class N3,N6,N8,N9 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

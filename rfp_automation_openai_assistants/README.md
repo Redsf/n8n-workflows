@@ -62,22 +62,31 @@ flowchart TD
     N6["Send Chat Notification<br/><small>slack</small>"]
     N7["Send Email Notification<br/><small>gmail</small>"]
     N8["Add Metadata to Response Doc<br/><small>googleDocs</small>"]
-    N9["Record Question & Answer in Response Doc<br/><small>googleDocs</small>"]
+    N9["Record Question &amp; Answer in Response Doc<br/><small>googleDocs</small>"]
     N10["Answer Question with Context<br/><small>openAi</small>"]
-    N11["Wait for Request<br/><small>webhook</small>"]
+    N11(["Wait for Request<br/><small>webhook</small>"])
     N12["Extract Questions From RFP<br/><small>chainLlm</small>"]
     N0 --> N3
     N3 --> N4
     N11 --> N0
-    N5 -.languageModel.-> N12
-    N2 -->|0| N7
-    N2 -->|1| N10
-    N1 -.outputParser.-> N12
+    N2 -->|done| N7
+    N2 -->|loop| N10
     N7 --> N6
     N12 --> N2
     N8 --> N12
     N10 --> N9
     N4 --> N8
     N9 --> N2
+    N5 -.languageModel.-> N12
+    N1 -.outputParser.-> N12
+
+    class N11 trigger
+    class N1,N5 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

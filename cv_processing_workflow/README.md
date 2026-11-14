@@ -48,7 +48,7 @@ No dedicated error-handling nodes are present. A failure in any step (Drive uplo
 
 ```mermaid
 flowchart TD
-    N0["On form submission<br/><small>formTrigger</small>"]
+    N0(["On form submission<br/><small>formTrigger</small>"])
     N1["Upload Resume<br/><small>googleDrive</small>"]
     N2["Download file<br/><small>googleDrive</small>"]
     N3["Extract from File<br/><small>extractFromFile</small>"]
@@ -64,10 +64,19 @@ flowchart TD
     N2 --> N3
     N3 --> N6
     N4 --> N8
-    N5 -.languageModel.-> N8
     N6 --> N4
-    N7 -.outputParser.-> N8
     N9 --> N10
     N8 --> N9
+    N5 -.languageModel.-> N8
+    N7 -.outputParser.-> N8
+
+    class N0 trigger
+    class N5,N7 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

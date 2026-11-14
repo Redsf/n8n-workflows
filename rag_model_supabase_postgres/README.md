@@ -38,28 +38,41 @@ No dedicated error-handling nodes are present. A failed download, embedding call
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Google Drive Trigger<br/><small>googleDriveTrigger</small>"]
-    N1["Download file<br/><small>googleDrive</small>"]
-    N2["AI Agent<br/><small>agent</small>"]
-    N3["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
-    N4["Embeddings OpenAI1<br/><small>embeddingsOpenAi</small>"]
-    N5["Supabase_Vectors<br/><small>vectorStoreSupabase</small>"]
-    N6["Postgres Chat Memory<br/><small>memoryPostgresChat</small>"]
-    N7["Supabase Vector Store<br/><small>vectorStoreSupabase</small>"]
-    N8["Embeddings OpenAI<br/><small>embeddingsOpenAi</small>"]
-    N9["Default Data Loader<br/><small>documentDefaultDataLoader</small>"]
-    N10["Telegram Trigger<br/><small>telegramTrigger</small>"]
-    N11["Send a text message<br/><small>telegram</small>"]
+flowchart LR
+    subgraph G0 ["Google Drive Trigger"]
+        N0(["Google Drive Trigger<br/><small>googleDriveTrigger</small>"])
+        N1["Download file<br/><small>googleDrive</small>"]
+        N7["Supabase Vector Store<br/><small>vectorStoreSupabase</small>"]
+        N8["Embeddings OpenAI<br/><small>embeddingsOpenAi</small>"]
+        N9["Default Data Loader<br/><small>documentDefaultDataLoader</small>"]
+    end
+    subgraph G1 ["Telegram Trigger"]
+        N2["AI Agent<br/><small>agent</small>"]
+        N3["OpenAI Chat Model<br/><small>lmChatOpenAi</small>"]
+        N4["Embeddings OpenAI1<br/><small>embeddingsOpenAi</small>"]
+        N5["Supabase_Vectors<br/><small>vectorStoreSupabase</small>"]
+        N6["Postgres Chat Memory<br/><small>memoryPostgresChat</small>"]
+        N10(["Telegram Trigger<br/><small>telegramTrigger</small>"])
+        N11["Send a text message<br/><small>telegram</small>"]
+    end
     N0 --> N1
     N1 --> N7
+    N10 --> N2
+    N2 --> N11
     N3 -.languageModel.-> N2
     N4 -.embedding.-> N5
     N5 -.tool.-> N2
     N6 -.memory.-> N2
     N8 -.embedding.-> N7
     N9 -.document.-> N7
-    N10 --> N2
-    N2 --> N11
+
+    class N0,N10 trigger
+    class N3,N4,N5,N6,N8,N9 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

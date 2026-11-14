@@ -37,17 +37,21 @@ Built for ecommerce brands running Shopify that want to win back abandoned check
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Checkout Abandoned<br/><small>shopifyTrigger</small>"]
-    N1["Wait 15 Min<br/><small>wait</small>"]
-    N2["Check Order Status<br/><small>httpRequest</small>"]
-    N3["Order Completed?<br/><small>if</small>"]
-    N4["Cart Converted<br/><small>noOp</small>"]
-    N5["Build Recovery Message<br/><small>set</small>"]
-    N6["Send Recovery Email<br/><small>gmail</small>"]
-    N7["Send Recovery WhatsApp<br/><small>whatsApp</small>"]
-    N8["Error Trigger<br/><small>errorTrigger</small>"]
-    N9["Notify Ops<br/><small>slack</small>"]
+flowchart LR
+    subgraph G0 ["Checkout Abandoned"]
+        N0(["Checkout Abandoned<br/><small>shopifyTrigger</small>"])
+        N1["Wait 15 Min<br/><small>wait</small>"]
+        N2["Check Order Status<br/><small>httpRequest</small>"]
+        N3{{"Order Completed?<br/><small>if</small>"}}
+        N4["Cart Converted<br/><small>noOp</small>"]
+        N5["Build Recovery Message<br/><small>set</small>"]
+        N6["Send Recovery Email<br/><small>gmail</small>"]
+        N7["Send Recovery WhatsApp<br/><small>whatsApp</small>"]
+    end
+    subgraph G1 ["Error handling"]
+        N8(["Error Trigger<br/><small>errorTrigger</small>"])
+        N9["Notify Ops<br/><small>slack</small>"]
+    end
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -56,5 +60,14 @@ flowchart TD
     N5 --> N6
     N5 --> N7
     N8 --> N9
+
+    class N0 trigger
+    class N8 errorPath
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

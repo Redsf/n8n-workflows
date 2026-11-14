@@ -61,32 +61,39 @@ The **Unsubscribe Form** (path `free-factoids-unsubscribe`) expects:
 ## Architecture
 
 ```mermaid
-flowchart TD
-    N0["Schedule Trigger<br/><small>scheduleTrigger</small>"]
-    N1["Search daily<br/><small>airtable</small>"]
-    N2["Search weekly<br/><small>airtable</small>"]
-    N3["confirmation email1<br/><small>gmail</small>"]
-    N4["Execute Workflow<br/><small>executeWorkflow</small>"]
-    N5["Create Event<br/><small>set</small>"]
-    N6["Execute Workflow Trigger<br/><small>executeWorkflowTrigger</small>"]
-    N7["Unsubscribe Form<br/><small>formTrigger</small>"]
-    N8["Set Email Vars<br/><small>set</small>"]
-    N9["Log Last Sent<br/><small>airtable</small>"]
-    N10["Search surprise<br/><small>airtable</small>"]
-    N11["Should Send = True<br/><small>filter</small>"]
-    N12["Should Send?<br/><small>code</small>"]
-    N13["Create Subscriber<br/><small>airtable</small>"]
-    N14["Update Subscriber<br/><small>airtable</small>"]
-    N15["Subscribe Form<br/><small>formTrigger</small>"]
-    N16["Execution Data<br/><small>executionData</small>"]
-    N17["Window Buffer Memory<br/><small>memoryBufferWindow</small>"]
-    N18["Wikipedia<br/><small>toolWikipedia</small>"]
-    N19["Content Generation Agent<br/><small>agent</small>"]
-    N20["Groq Chat Model<br/><small>lmChatGroq</small>"]
-    N21["Generate Image<br/><small>openAi</small>"]
-    N22["Resize Image<br/><small>editImage</small>"]
-    N23["Send Message<br/><small>gmail</small>"]
-    N18 -.tool.-> N19
+flowchart LR
+    subgraph G0 ["Schedule Trigger"]
+        N0(["Schedule Trigger<br/><small>scheduleTrigger</small>"])
+        N1["Search daily<br/><small>airtable</small>"]
+        N2["Search weekly<br/><small>airtable</small>"]
+        N4["Execute Workflow<br/><small>executeWorkflow</small>"]
+        N5["Create Event<br/><small>set</small>"]
+        N10["Search surprise<br/><small>airtable</small>"]
+        N11{{"Should Send = True<br/><small>filter</small>"}}
+        N12["Should Send?<br/><small>code</small>"]
+    end
+    subgraph G1 ["Subscribe Form"]
+        N3["confirmation email1<br/><small>gmail</small>"]
+        N13["Create Subscriber<br/><small>airtable</small>"]
+        N15(["Subscribe Form<br/><small>formTrigger</small>"])
+    end
+    subgraph G2 ["Execute Workflow Trigger"]
+        N6(["Execute Workflow Trigger<br/><small>executeWorkflowTrigger</small>"])
+        N8["Set Email Vars<br/><small>set</small>"]
+        N9["Log Last Sent<br/><small>airtable</small>"]
+        N16["Execution Data<br/><small>executionData</small>"]
+        N17["Window Buffer Memory<br/><small>memoryBufferWindow</small>"]
+        N18["Wikipedia<br/><small>toolWikipedia</small>"]
+        N19["Content Generation Agent<br/><small>agent</small>"]
+        N20["Groq Chat Model<br/><small>lmChatGroq</small>"]
+        N21["Generate Image<br/><small>openAi</small>"]
+        N22["Resize Image<br/><small>editImage</small>"]
+        N23["Send Message<br/><small>gmail</small>"]
+    end
+    subgraph G3 ["Unsubscribe Form"]
+        N7(["Unsubscribe Form<br/><small>formTrigger</small>"])
+        N14["Update Subscriber<br/><small>airtable</small>"]
+    end
     N5 --> N4
     N22 --> N8
     N1 --> N5
@@ -97,7 +104,6 @@ flowchart TD
     N21 --> N22
     N8 --> N23
     N15 --> N13
-    N20 -.languageModel.-> N19
     N10 --> N12
     N0 --> N10
     N0 --> N1
@@ -105,8 +111,19 @@ flowchart TD
     N7 --> N14
     N13 --> N3
     N11 --> N5
-    N17 -.memory.-> N19
     N19 --> N21
     N6 --> N16
+    N18 -.tool.-> N19
+    N20 -.languageModel.-> N19
+    N17 -.memory.-> N19
+
+    class N0,N6,N7,N15 trigger
+    class N17,N18,N20 aiSubnode
+    classDef trigger stroke-width:3px
+    classDef aiSubnode stroke-dasharray:5 3
+    classDef errorPath stroke-width:3px,stroke-dasharray:2 2
+    classDef disabled stroke-dasharray:1 4,opacity:0.45
 ```
+
+> Shapes: rounded = trigger, hexagon = branch point. Dashed borders mark AI sub-nodes; dotted edges are the model, memory and tool connections feeding an agent. Faded nodes are disabled in this export.
 <!-- ARCHITECTURE:END -->

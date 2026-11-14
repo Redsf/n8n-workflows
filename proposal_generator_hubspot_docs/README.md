@@ -17,7 +17,6 @@ Built for agencies, consultancies and accounting firms that rebuild the same pro
 5. **Approved?** (If) splits two ways:
    - Approved: **Export as PDF** (Google Drive), **Email Proposal** (Gmail) with the PDF attached, **Move Deal to Proposal Sent** (HubSpot) and **Confirm Sent** (Slack).
    - On hold: **Note Proposal on Hold** (Slack) keeps the draft for manual sending.
-6. **On Workflow Error** (Error Trigger) feeds **Format Error Details**, which posts to `#automation-alerts` and writes a row to the error sheet.
 
 ## Sample request
 
@@ -35,8 +34,8 @@ Template placeholders: `{{client_name}}`, `{{client_company}}`, `{{deal_name}}`,
 3. **HubSpot** — connect an account on **Move Deal to Proposal Sent** and the three HTTP Request nodes. In a HubSpot workflow (deal enters proposal stage), add *Send a webhook* with `dealId` to the `/proposal-ready` URL.
 4. **Google Drive** and **Google Docs** — connect accounts on **Copy Proposal Template**, **Export as PDF** and **Fill Placeholders**.
 5. **Gmail** — connect an account on **Email Proposal**.
-6. **Slack** — connect an account on the Slack nodes and create `#proposals` and `#automation-alerts`.
-7. **Google Sheets** — connect an account on **Log to Error Sheet** and replace the placeholder document ID (`REPLACE_WITH_SPREADSHEET_ID`).
+6. **Slack** — connect an account on the Slack nodes and point them at your own channel (currently `#proposals`).
+7. **Error handling** — import [Workflow Error Handler](../workflow_error_handler) first, then select it under *Workflow settings → Error workflow* (shipped as `REPLACE_WITH_ERROR_WORKFLOW_ID`).
 
 ---
 
@@ -44,34 +43,26 @@ Template placeholders: `{{client_name}}`, `{{client_company}}`, `{{deal_name}}`,
 ## Architecture
 
 ```mermaid
-flowchart LR
-    subgraph G0 ["Deal Reached Proposal"]
-        N0(["Deal Reached Proposal<br/><small>webhook</small>"])
-        N1["Proposal Settings<br/><small>set</small>"]
-        N2["Get Deal and Associations<br/><small>httpRequest</small>"]
-        N3{{"Has Line Items and Contact?<br/><small>if</small>"}}
-        N4["Get Line Items<br/><small>httpRequest</small>"]
-        N5["Get Primary Contact<br/><small>httpRequest</small>"]
-        N6["Build Proposal Data<br/><small>code</small>"]
-        N7{{"Contact Has Email?<br/><small>if</small>"}}
-        N8["Copy Proposal Template<br/><small>googleDrive</small>"]
-        N9["Fill Placeholders<br/><small>googleDocs</small>"]
-        N10["Approve Proposal<br/><small>slack</small>"]
-        N11{{"Approved?<br/><small>if</small>"}}
-        N12["Export as PDF<br/><small>googleDrive</small>"]
-        N13["Email Proposal<br/><small>gmail</small>"]
-        N14["Move Deal to Proposal Sent<br/><small>hubspot</small>"]
-        N15["Confirm Sent<br/><small>slack</small>"]
-        N16["Note Proposal on Hold<br/><small>slack</small>"]
-        N17["Ask for Contact Email<br/><small>slack</small>"]
-        N18["Ask Rep to Fix Deal<br/><small>slack</small>"]
-    end
-    subgraph G1 ["Error handling"]
-        N19(["On Workflow Error<br/><small>errorTrigger</small>"])
-        N20["Format Error Details<br/><small>set</small>"]
-        N21["Alert #automation-alerts<br/><small>slack</small>"]
-        N22["Log to Error Sheet<br/><small>googleSheets</small>"]
-    end
+flowchart TD
+    N0(["Deal Reached Proposal<br/><small>webhook</small>"])
+    N1["Proposal Settings<br/><small>set</small>"]
+    N2["Get Deal and Associations<br/><small>httpRequest</small>"]
+    N3{{"Has Line Items and Contact?<br/><small>if</small>"}}
+    N4["Get Line Items<br/><small>httpRequest</small>"]
+    N5["Get Primary Contact<br/><small>httpRequest</small>"]
+    N6["Build Proposal Data<br/><small>code</small>"]
+    N7{{"Contact Has Email?<br/><small>if</small>"}}
+    N8["Copy Proposal Template<br/><small>googleDrive</small>"]
+    N9["Fill Placeholders<br/><small>googleDocs</small>"]
+    N10["Approve Proposal<br/><small>slack</small>"]
+    N11{{"Approved?<br/><small>if</small>"}}
+    N12["Export as PDF<br/><small>googleDrive</small>"]
+    N13["Email Proposal<br/><small>gmail</small>"]
+    N14["Move Deal to Proposal Sent<br/><small>hubspot</small>"]
+    N15["Confirm Sent<br/><small>slack</small>"]
+    N16["Note Proposal on Hold<br/><small>slack</small>"]
+    N17["Ask for Contact Email<br/><small>slack</small>"]
+    N18["Ask Rep to Fix Deal<br/><small>slack</small>"]
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -90,12 +81,8 @@ flowchart LR
     N12 --> N13
     N13 --> N14
     N14 --> N15
-    N19 --> N20
-    N20 --> N21
-    N20 --> N22
 
     class N0 trigger
-    class N19 errorPath
     classDef trigger stroke-width:3px
     classDef aiSubnode stroke-dasharray:5 3
     classDef errorPath stroke-width:3px,stroke-dasharray:2 2

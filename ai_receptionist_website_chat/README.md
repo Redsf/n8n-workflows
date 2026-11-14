@@ -18,7 +18,6 @@ Built for small service firms that want 24/7 lead capture and booking without pa
    - **Hand Off to Human** (Slack) alerts `#website-chat` when the visitor wants a person or the agent is unsure.
 3. The system prompt keeps it safe: answer only from the profile, never quote prices, no legal or tax advice, check the exact slot and get a clear yes before booking.
 4. **Log Chat Message** (Google Sheets) records every visitor message on a parallel branch, so logging never slows or breaks the reply.
-5. **On Workflow Error** (Error Trigger) feeds **Format Error Details**, which posts to `#automation-alerts` and writes a row to the error sheet.
 
 ## Sample request
 
@@ -38,9 +37,10 @@ Open the hosted chat URL from the **Website Chat** node, or embed it on your sit
 2. **Anthropic** — connect an account on **Claude Model**.
 3. **Google Calendar** — connect an account on **Check Availability** and **Book Meeting**, and pick your calendar in both (currently set to `primary`).
 4. **HubSpot** — connect an account on **Save Lead to HubSpot**.
-5. **Slack** — connect an account on **Hand Off to Human** and **Alert #automation-alerts**, and create `#website-chat` and `#automation-alerts`.
-6. **Google Sheets** — connect an account on **Log Chat Message** and **Log to Error Sheet**, and replace the placeholder document IDs (`REPLACE_WITH_SPREADSHEET_ID`) with your own sheets.
-7. Activate the workflow, then embed the chat snippet above.
+5. **Slack** — connect an account on **Hand Off to Human** and point it at your own channel (currently `#website-chat`).
+6. **Google Sheets** — connect an account on **Log Chat Message** and replace the placeholder document ID (`REPLACE_WITH_SPREADSHEET_ID`).
+7. **Error handling** — import [Workflow Error Handler](../workflow_error_handler) first, then select it under *Workflow settings → Error workflow* (shipped as `REPLACE_WITH_ERROR_WORKFLOW_ID`).
+8. Activate the workflow, then embed the chat snippet above.
 
 ---
 
@@ -48,31 +48,20 @@ Open the hosted chat URL from the **Website Chat** node, or embed it on your sit
 ## Architecture
 
 ```mermaid
-flowchart LR
-    subgraph G0 ["Website Chat"]
-        N0(["Website Chat<br/><small>chatTrigger</small>"])
-        N1["Business Profile<br/><small>set</small>"]
-        N2["AI Receptionist<br/><small>agent</small>"]
-        N3["Claude Model<br/><small>lmChatAnthropic</small>"]
-        N4["Conversation Memory<br/><small>memoryBufferWindow</small>"]
-        N5["Check Availability<br/><small>googleCalendarTool</small>"]
-        N6["Book Meeting<br/><small>googleCalendarTool</small>"]
-        N7["Save Lead to HubSpot<br/><small>hubspotTool</small>"]
-        N8["Hand Off to Human<br/><small>slackTool</small>"]
-        N9["Log Chat Message<br/><small>googleSheets</small>"]
-    end
-    subgraph G1 ["Error handling"]
-        N10(["On Workflow Error<br/><small>errorTrigger</small>"])
-        N11["Format Error Details<br/><small>set</small>"]
-        N12["Alert #automation-alerts<br/><small>slack</small>"]
-        N13["Log to Error Sheet<br/><small>googleSheets</small>"]
-    end
+flowchart TD
+    N0(["Website Chat<br/><small>chatTrigger</small>"])
+    N1["Business Profile<br/><small>set</small>"]
+    N2["AI Receptionist<br/><small>agent</small>"]
+    N3["Claude Model<br/><small>lmChatAnthropic</small>"]
+    N4["Conversation Memory<br/><small>memoryBufferWindow</small>"]
+    N5["Check Availability<br/><small>googleCalendarTool</small>"]
+    N6["Book Meeting<br/><small>googleCalendarTool</small>"]
+    N7["Save Lead to HubSpot<br/><small>hubspotTool</small>"]
+    N8["Hand Off to Human<br/><small>slackTool</small>"]
+    N9["Log Chat Message<br/><small>googleSheets</small>"]
     N0 --> N1
     N0 --> N9
     N1 --> N2
-    N10 --> N11
-    N11 --> N12
-    N11 --> N13
     N3 -.languageModel.-> N2
     N4 -.memory.-> N2
     N5 -.tool.-> N2
@@ -81,7 +70,6 @@ flowchart LR
     N8 -.tool.-> N2
 
     class N0 trigger
-    class N10 errorPath
     class N3,N4,N5,N6,N7,N8 aiSubnode
     classDef trigger stroke-width:3px
     classDef aiSubnode stroke-dasharray:5 3

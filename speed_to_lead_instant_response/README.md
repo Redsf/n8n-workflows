@@ -19,7 +19,6 @@ Built for service businesses (accounting, insurance, real estate, agencies) wher
    - **Alert Sales Rep** (Slack) posts the lead to `#new-leads` with a HubSpot link.
 5. **Build First-Touch Log** (Set) records seconds-to-first-touch and **Log First Touch** (Google Sheets) writes it to a sheet.
 6. **Wait 15 Minutes** (Wait), then **Check Contact Activity** (HubSpot) reads the latest meeting and last-contacted dates. **Booked or Contacted?** (If) ends at **Lead Handled In Time** if either is set; otherwise **Create Call-Now Task** (HubSpot) adds a task and **Escalate Unanswered Lead** (Slack) nudges the team again.
-7. **On Workflow Error** (Error Trigger) feeds **Format Error Details**, which posts to `#automation-alerts` and writes a row to the error sheet.
 
 ## Sample request
 
@@ -35,8 +34,9 @@ curl -X POST https://YOUR-N8N/webhook/speed-to-lead \
 2. **HubSpot** — connect an account on **Upsert HubSpot Contact**, **Check Contact Activity** and **Create Call-Now Task**.
 3. **Gmail** — connect an account on **Send Instant Email** and adjust the wording as needed.
 4. **Twilio** — connect an account on **Send Instant SMS**. The number must be SMS-enabled (A2P 10DLC registered for US numbers).
-5. **Slack** — connect an account on **Alert Sales Rep**, **Escalate Unanswered Lead** and **Alert #automation-alerts**, and create `#new-leads` and `#automation-alerts`.
-6. **Google Sheets** — connect an account on **Log First Touch** and **Log to Error Sheet**, and replace the placeholder document IDs (`REPLACE_WITH_SPREADSHEET_ID`) with your own sheets.
+5. **Slack** — connect an account on **Alert Sales Rep** and **Escalate Unanswered Lead**, and point them at your own channel (currently `#new-leads`).
+6. **Google Sheets** — connect an account on **Log First Touch** and replace the placeholder document ID (`REPLACE_WITH_SPREADSHEET_ID`) with your own sheet.
+7. **Error handling** — import [Workflow Error Handler](../workflow_error_handler) first, then select it under *Workflow settings → Error workflow* (shipped as `REPLACE_WITH_ERROR_WORKFLOW_ID`).
 
 ---
 
@@ -44,34 +44,26 @@ curl -X POST https://YOUR-N8N/webhook/speed-to-lead \
 ## Architecture
 
 ```mermaid
-flowchart LR
-    subgraph G0 ["New Lead Webhook / Confirm Receipt / Reject Invalid Lead"]
-        N0(["New Lead Webhook<br/><small>webhook</small>"])
-        N1["Business Settings<br/><small>set</small>"]
-        N2["Normalize Lead<br/><small>set</small>"]
-        N3{{"Valid Lead?<br/><small>if</small>"}}
-        N4(["Confirm Receipt<br/><small>respondToWebhook</small>"])
-        N5["Upsert HubSpot Contact<br/><small>hubspot</small>"]
-        N6["Send Instant Email<br/><small>gmail</small>"]
-        N7{{"Has Phone Number?<br/><small>if</small>"}}
-        N8["Send Instant SMS<br/><small>twilio</small>"]
-        N9["Alert Sales Rep<br/><small>slack</small>"]
-        N10(["Reject Invalid Lead<br/><small>respondToWebhook</small>"])
-        N11["Build First-Touch Log<br/><small>set</small>"]
-        N12["Log First Touch<br/><small>googleSheets</small>"]
-        N13["Wait 15 Minutes<br/><small>wait</small>"]
-        N14["Check Contact Activity<br/><small>hubspot</small>"]
-        N15{{"Booked or Contacted?<br/><small>if</small>"}}
-        N16["Lead Handled In Time<br/><small>noOp</small>"]
-        N17["Create Call-Now Task<br/><small>hubspot</small>"]
-        N18["Escalate Unanswered Lead<br/><small>slack</small>"]
-    end
-    subgraph G1 ["Error handling"]
-        N19(["On Workflow Error<br/><small>errorTrigger</small>"])
-        N20["Format Error Details<br/><small>set</small>"]
-        N21["Alert #automation-alerts<br/><small>slack</small>"]
-        N22["Log to Error Sheet<br/><small>googleSheets</small>"]
-    end
+flowchart TD
+    N0(["New Lead Webhook<br/><small>webhook</small>"])
+    N1["Business Settings<br/><small>set</small>"]
+    N2["Normalize Lead<br/><small>set</small>"]
+    N3{{"Valid Lead?<br/><small>if</small>"}}
+    N4(["Confirm Receipt<br/><small>respondToWebhook</small>"])
+    N5["Upsert HubSpot Contact<br/><small>hubspot</small>"]
+    N6["Send Instant Email<br/><small>gmail</small>"]
+    N7{{"Has Phone Number?<br/><small>if</small>"}}
+    N8["Send Instant SMS<br/><small>twilio</small>"]
+    N9["Alert Sales Rep<br/><small>slack</small>"]
+    N10(["Reject Invalid Lead<br/><small>respondToWebhook</small>"])
+    N11["Build First-Touch Log<br/><small>set</small>"]
+    N12["Log First Touch<br/><small>googleSheets</small>"]
+    N13["Wait 15 Minutes<br/><small>wait</small>"]
+    N14["Check Contact Activity<br/><small>hubspot</small>"]
+    N15{{"Booked or Contacted?<br/><small>if</small>"}}
+    N16["Lead Handled In Time<br/><small>noOp</small>"]
+    N17["Create Call-Now Task<br/><small>hubspot</small>"]
+    N18["Escalate Unanswered Lead<br/><small>slack</small>"]
     N0 --> N1
     N1 --> N2
     N2 --> N3
@@ -91,12 +83,8 @@ flowchart LR
     N15 -->|true| N16
     N15 -->|false| N17
     N17 --> N18
-    N19 --> N20
-    N20 --> N21
-    N20 --> N22
 
     class N0,N4,N10 trigger
-    class N19 errorPath
     classDef trigger stroke-width:3px
     classDef aiSubnode stroke-dasharray:5 3
     classDef errorPath stroke-width:3px,stroke-dasharray:2 2

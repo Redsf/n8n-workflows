@@ -12,8 +12,8 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.2,
       "position": [
-        0,
-        192
+        240,
+        492
       ],
       "parameters": {
         "httpMethod": "POST",
@@ -27,8 +27,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        224,
-        192
+        464,
+        492
       ],
       "parameters": {
         "mode": "manual",
@@ -75,8 +75,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        448,
-        192
+        688,
+        492
       ],
       "parameters": {
         "mode": "manual",
@@ -141,8 +141,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        672,
-        192
+        912,
+        492
       ],
       "parameters": {
         "conditions": {
@@ -172,8 +172,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        896,
-        96
+        1136,
+        396
       ],
       "parameters": {
         "respondWith": "json",
@@ -189,8 +189,8 @@
       "type": "n8n-nodes-base.hubspot",
       "typeVersion": 2.2,
       "position": [
-        1120,
-        96
+        1360,
+        396
       ],
       "parameters": {
         "resource": "contact",
@@ -222,8 +222,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        1344,
-        96
+        1584,
+        396
       ],
       "parameters": {
         "resource": "message",
@@ -254,8 +254,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1568,
-        96
+        1808,
+        396
       ],
       "parameters": {
         "conditions": {
@@ -285,8 +285,8 @@
       "type": "n8n-nodes-base.twilio",
       "typeVersion": 1,
       "position": [
-        1792,
-        32
+        2032,
+        332
       ],
       "parameters": {
         "resource": "sms",
@@ -307,8 +307,8 @@
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2.7,
       "position": [
-        2016,
-        96
+        2256,
+        396
       ],
       "parameters": {
         "resource": "message",
@@ -343,8 +343,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        896,
-        288
+        1136,
+        588
       ],
       "parameters": {
         "respondWith": "json",
@@ -360,8 +360,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2240,
-        96
+        2480,
+        396
       ],
       "parameters": {
         "mode": "manual",
@@ -433,8 +433,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        2464,
-        96
+        2704,
+        396
       ],
       "parameters": {
         "resource": "sheet",
@@ -475,8 +475,8 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        2688,
-        96
+        2928,
+        396
       ],
       "parameters": {
         "resume": "timeInterval",
@@ -490,8 +490,8 @@
       "type": "n8n-nodes-base.hubspot",
       "typeVersion": 2.2,
       "position": [
-        2912,
-        96
+        3152,
+        396
       ],
       "parameters": {
         "resource": "contact",
@@ -533,8 +533,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        3136,
-        96
+        3376,
+        396
       ],
       "parameters": {
         "conditions": {
@@ -573,8 +573,8 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        3360,
-        0
+        3600,
+        300
       ],
       "parameters": {}
     },
@@ -584,8 +584,8 @@
       "type": "n8n-nodes-base.hubspot",
       "typeVersion": 2.2,
       "position": [
-        3360,
-        192
+        3600,
+        492
       ],
       "parameters": {
         "resource": "engagement",
@@ -622,8 +622,8 @@
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2.7,
       "position": [
-        3584,
-        192
+        3824,
+        492
       ],
       "parameters": {
         "resource": "message",
@@ -651,146 +651,16 @@
       "maxTries": 3,
       "waitBetweenTries": 2000,
       "onError": "continueRegularOutput"
-    },
-    {
-      "id": "43b5189e-fb17-4e14-be43-e80b8c50508d",
-      "name": "On Workflow Error",
-      "type": "n8n-nodes-base.errorTrigger",
-      "typeVersion": 1,
-      "position": [
-        0,
-        608
-      ],
-      "parameters": {}
-    },
-    {
-      "id": "5308ab20-b85a-4840-86e5-d2f72310dc14",
-      "name": "Format Error Details",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        224,
-        608
-      ],
-      "parameters": {
-        "mode": "manual",
-        "includeOtherFields": false,
-        "assignments": {
-          "assignments": [
-            {
-              "id": "e1",
-              "name": "failedAt",
-              "value": "={{ $now.toISO() }}",
-              "type": "string"
-            },
-            {
-              "id": "e2",
-              "name": "workflow",
-              "value": "={{ $json.workflow?.name ?? \"unknown\" }}",
-              "type": "string"
-            },
-            {
-              "id": "e3",
-              "name": "failedNode",
-              "value": "={{ $json.execution?.lastNodeExecuted ?? \"unknown\" }}",
-              "type": "string"
-            },
-            {
-              "id": "e4",
-              "name": "errorMessage",
-              "value": "={{ ($json.execution?.error?.message ?? \"No message\").slice(0, 500) }}",
-              "type": "string"
-            },
-            {
-              "id": "e5",
-              "name": "executionUrl",
-              "value": "={{ $json.execution?.url ?? \"\" }}",
-              "type": "string"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "150f3ce5-8641-445f-903a-c69c500b7026",
-      "name": "Alert #automation-alerts",
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 2.7,
-      "position": [
-        448,
-        512
-      ],
-      "parameters": {
-        "resource": "message",
-        "operation": "post",
-        "authentication": "oAuth2",
-        "select": "channel",
-        "channelId": {
-          "__rl": true,
-          "mode": "name",
-          "value": "automation-alerts"
-        },
-        "messageType": "text",
-        "text": "=:x: *{{ $json.workflow }} failed*\nNode: {{ $json.failedNode }}\nError: {{ $json.errorMessage }}\n<{{ $json.executionUrl }}|Open the failed run>",
-        "otherOptions": {
-          "includeLinkToWorkflow": false
-        }
-      },
-      "credentials": {
-        "slackOAuth2Api": {
-          "id": "REPLACE_WITH_CREDENTIAL_ID",
-          "name": "Slack account"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "c1223a88-afea-4684-8936-addad32b6462",
-      "name": "Log to Error Sheet",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
-      "position": [
-        448,
-        704
-      ],
-      "parameters": {
-        "resource": "sheet",
-        "operation": "append",
-        "authentication": "oAuth2",
-        "documentId": {
-          "__rl": true,
-          "mode": "list",
-          "value": "",
-          "cachedResultName": "Automation Error Log"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "Sheet1"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "value": {},
-          "schema": []
-        },
-        "options": {}
-      },
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "REPLACE_WITH_CREDENTIAL_ID",
-          "name": "Google Sheets account"
-        }
-      },
-      "onError": "continueRegularOutput"
     }
   ],
   "active": false,
   "pinData": {},
   "settings": {
     "binaryMode": "separate",
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
   },
-  "versionId": "622807cf-87f9-43cb-82df-ba1d1c11e9fb",
+  "versionId": "17cd58bf-8fe6-4e1f-b3d8-3bfb05882cb7",
   "nodeGroups": [],
   "connections": {
     "New Lead Webhook": {
@@ -984,33 +854,6 @@
         [
           {
             "node": "Escalate Unanswered Lead",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "On Workflow Error": {
-      "main": [
-        [
-          {
-            "node": "Format Error Details",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Error Details": {
-      "main": [
-        [
-          {
-            "node": "Alert #automation-alerts",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Log to Error Sheet",
             "type": "main",
             "index": 0
           }

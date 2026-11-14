@@ -2,7 +2,7 @@
 
 [![validate](https://github.com/Redsf/n8n-workflows/actions/workflows/validate.yml/badge.svg)](https://github.com/Redsf/n8n-workflows/actions/workflows/validate.yml)
 
-A collection of 66 production-style n8n automations covering AI agents, RAG knowledge systems, e-commerce operations, real estate, and HR document processing. Each workflow lives in its own folder as a ready-to-import JSON file with a README explaining what it does, how it's wired, and how to configure it.
+A collection of 70 production-style n8n automations covering AI agents, RAG knowledge systems, e-commerce operations, real estate, and HR document processing. Each workflow lives in its own folder as a ready-to-import JSON file with a README explaining what it does, how it's wired, and how to configure it.
 
 These solve real operational problems: recovering abandoned carts, qualifying and routing leads, extracting data from invoices, answering questions with grounded AI, and keeping teams informed without manual busywork.
 
@@ -43,7 +43,7 @@ Credentials are referenced by name only. No API keys, tokens, or secrets are sto
 ## Quality checks
 
 Every push runs [`scripts/validate_workflows.py`](scripts/validate_workflows.py)
-across all 66 workflows, plus a gitleaks scan of the working tree.
+across all 70 workflows, plus a gitleaks scan of the working tree.
 
 **Blocking (fails the build):**
 
@@ -58,7 +58,7 @@ across all 66 workflows, plus a gitleaks scan of the working tree.
 - Disabled nodes left on the canvas
 
 The advisory checks are deliberately not blocking, because they describe
-reliability posture rather than correctness. Worth knowing: **22 of 66
+reliability posture rather than correctness. Worth knowing: **22 of 70
 workflows currently have an active Error Trigger.** The rest will fail silently
 if you activate them as-is. The validator tells you which ones on every run.
 
@@ -168,12 +168,16 @@ Built for small and mid-size US service firms (accounting, wealth management, in
 | # | Workflow | Summary |
 |---|----------|---------|
 | 60 | [Speed-to-Lead Instant Response](speed_to_lead_instant_response) | Texts and emails every new lead a booking link within seconds, alerts the rep, and escalates with a HubSpot task if nobody has made contact after 15 minutes. |
-| 61 | [Missed-Call Text Back](missed_call_text_back) | Texts missed Twilio callers a booking link (open-hours vs after-hours wording), creates HubSpot callback tasks, and has AI sort text replies. |
+| 61 | [Missed-Call Text Back](missed_call_text_back) | Texts missed Twilio callers a booking link (open-hours vs after-hours wording), creates HubSpot callback tasks and alerts the team. |
 | 62 | [AI Receptionist (Website Chat)](ai_receptionist_website_chat) | Website chat agent that answers from a business profile, saves leads to HubSpot, checks Google Calendar and books meetings, with Slack handoff. |
-| 63 | [Old Lead Revival](old_lead_revival) | Finds HubSpot leads cold for 90+ days, drafts personal check-ins with AI, sends only after Slack approval, and alerts on replies. |
+| 63 | [Old Lead Revival](old_lead_revival) | Finds HubSpot leads cold for 90+ days, drafts personal check-ins with AI, and sends only after Slack approval. |
 | 64 | [Proposal Generator (HubSpot + Google Docs)](proposal_generator_hubspot_docs) | Builds a proposal from deal line items in a Google Docs template, gets Slack approval, emails the PDF, and moves the deal stage. |
 | 65 | [Stale Deal Reminder](stale_deal_reminder) | Daily per-rep Slack digests of idle HubSpot deals with AI next steps, one-time follow-up tasks, and a manager alert at 14+ days. |
-| 66 | [Referral Tracking & Rewards](referral_tracking_rewards) | Logs referrals, thanks referrers, and on closed-won asks finance to send the reward exactly once. |
+| 66 | [Referral Tracking & Rewards](referral_tracking_rewards) | Logs referrals, thanks referrers, and announces each new referral in Slack. |
+| 67 | [Workflow Error Handler](workflow_error_handler) | Shared error workflow for the lead & sales set: posts any failed run to Slack and logs it to an error sheet. |
+| 68 | [Missed-Call Reply Classifier](missed_call_reply_classifier) | Sorts texts sent back after a missed-call text with AI (urgent, booking, question, opt-out) and posts them to Slack. |
+| 69 | [Lead Revival Reply Alert](lead_revival_reply_alert) | Watches Gmail for replies to revival emails and alerts the rep in Slack. |
+| 70 | [Referral Reward on Deal Won](referral_reward_on_deal_won) | On closed-won, asks finance to send the referral reward, emails the referrer and marks the reward sent exactly once. |
 
 ## Stack
 

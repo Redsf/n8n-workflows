@@ -12,8 +12,8 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.2,
       "position": [
-        0,
-        176
+        240,
+        476
       ],
       "parameters": {
         "httpMethod": "POST",
@@ -27,8 +27,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        224,
-        176
+        464,
+        476
       ],
       "parameters": {
         "mode": "manual",
@@ -63,8 +63,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        448,
-        176
+        688,
+        476
       ],
       "parameters": {
         "mode": "manual",
@@ -129,8 +129,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        672,
-        176
+        912,
+        476
       ],
       "parameters": {
         "conditions": {
@@ -160,8 +160,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        896,
-        80
+        1136,
+        380
       ],
       "parameters": {
         "respondWith": "json",
@@ -177,8 +177,8 @@
       "type": "n8n-nodes-base.hubspot",
       "typeVersion": 2.2,
       "position": [
-        1120,
-        80
+        1360,
+        380
       ],
       "parameters": {
         "resource": "contact",
@@ -227,8 +227,8 @@
       "type": "n8n-nodes-base.hubspot",
       "typeVersion": 2.2,
       "position": [
-        1344,
-        80
+        1584,
+        380
       ],
       "parameters": {
         "resource": "contact",
@@ -268,8 +268,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1568,
-        80
+        1808,
+        380
       ],
       "parameters": {
         "conditions": {
@@ -299,8 +299,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        1792,
-        0
+        2032,
+        300
       ],
       "parameters": {
         "resource": "message",
@@ -331,8 +331,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        2016,
-        80
+        2256,
+        380
       ],
       "parameters": {
         "resource": "sheet",
@@ -464,8 +464,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        896,
-        272
+        1136,
+        572
       ],
       "parameters": {
         "respondWith": "json",
@@ -481,8 +481,8 @@
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2.7,
       "position": [
-        2240,
-        80
+        2480,
+        380
       ],
       "parameters": {
         "resource": "message",
@@ -507,447 +507,16 @@
         }
       },
       "onError": "continueRegularOutput"
-    },
-    {
-      "id": "038bc135-10d0-4a95-9282-db3b74abfa8c",
-      "name": "Deal Won",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2.2,
-      "position": [
-        0,
-        592
-      ],
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "referral-deal-won",
-        "responseMode": "onReceived"
-      }
-    },
-    {
-      "id": "c4352b55-20aa-4324-8158-df40b524f3e5",
-      "name": "Won Deal Details",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        224,
-        592
-      ],
-      "parameters": {
-        "mode": "manual",
-        "includeOtherFields": false,
-        "assignments": {
-          "assignments": [
-            {
-              "id": "w1",
-              "name": "leadEmail",
-              "value": "={{ String($json.body?.contactEmail ?? $json.body?.email ?? \"\").trim().toLowerCase() }}",
-              "type": "string"
-            },
-            {
-              "id": "w2",
-              "name": "dealName",
-              "value": "={{ $json.body?.dealName ?? \"a new project\" }}",
-              "type": "string"
-            },
-            {
-              "id": "w3",
-              "name": "amount",
-              "value": "={{ $json.body?.amount ?? \"\" }}",
-              "type": "string"
-            },
-            {
-              "id": "w4",
-              "name": "senderName",
-              "value": "Alex from Your Company",
-              "type": "string"
-            },
-            {
-              "id": "w5",
-              "name": "rewardText",
-              "value": "a $250 thank-you gift card",
-              "type": "string"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "32207099-4b97-4ac7-8412-7c62770af7d3",
-      "name": "Find Open Referral",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
-      "position": [
-        448,
-        592
-      ],
-      "parameters": {
-        "resource": "sheet",
-        "operation": "read",
-        "authentication": "oAuth2",
-        "documentId": {
-          "__rl": true,
-          "mode": "list",
-          "value": "",
-          "cachedResultName": "Referral Tracker"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "Sheet1"
-        },
-        "filtersUI": {
-          "values": [
-            {
-              "lookupColumn": "leadEmail",
-              "lookupValue": "={{ $json.leadEmail }}"
-            },
-            {
-              "lookupColumn": "status",
-              "lookupValue": "referred"
-            }
-          ]
-        },
-        "combineFilters": "AND",
-        "options": {
-          "returnFirstMatch": true
-        }
-      },
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "REPLACE_WITH_CREDENTIAL_ID",
-          "name": "Google Sheets account"
-        }
-      },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 2000,
-      "alwaysOutputData": true
-    },
-    {
-      "id": "bccf2079-7f60-4ac5-910e-2224177f806f",
-      "name": "Was a Referral?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        672,
-        592
-      ],
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "loose"
-          },
-          "conditions": [
-            {
-              "leftValue": "={{ $json.referrerEmail ?? \"\" }}",
-              "operator": {
-                "type": "string",
-                "operation": "notEmpty",
-                "singleValue": true
-              },
-              "rightValue": ""
-            }
-          ],
-          "combinator": "and"
-        }
-      }
-    },
-    {
-      "id": "3f0247a7-b408-4092-b564-9e64f42e66e7",
-      "name": "Ask Finance to Send Reward",
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 2.7,
-      "position": [
-        896,
-        496
-      ],
-      "parameters": {
-        "resource": "message",
-        "operation": "post",
-        "authentication": "oAuth2",
-        "select": "channel",
-        "channelId": {
-          "__rl": true,
-          "mode": "name",
-          "value": "finance"
-        },
-        "messageType": "text",
-        "text": "=:gift: *Referral reward due*\n{{ $json.referrerName?.trim() || $json.referrerEmail }} ({{ $json.referrerEmail }}) referred {{ $json.leadName }}, who just signed: {{ $('Won Deal Details').item.json.dealName }}{{ $('Won Deal Details').item.json.amount ? ' ($' + Number($('Won Deal Details').item.json.amount).toLocaleString('en-US') + ')' : '' }}.\nPlease send {{ $('Won Deal Details').item.json.rewardText }}.",
-        "otherOptions": {
-          "includeLinkToWorkflow": false
-        }
-      },
-      "credentials": {
-        "slackOAuth2Api": {
-          "id": "REPLACE_WITH_CREDENTIAL_ID",
-          "name": "Slack account"
-        }
-      },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 2000
-    },
-    {
-      "id": "3e2331f8-3281-482e-87c0-9c66f3b494a7",
-      "name": "Tell Referrer the Good News",
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.2,
-      "position": [
-        1120,
-        496
-      ],
-      "parameters": {
-        "resource": "message",
-        "operation": "send",
-        "sendTo": "={{ $('Find Open Referral').item.json.referrerEmail }}",
-        "subject": "Your referral just became a client",
-        "emailType": "html",
-        "message": "=<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;max-width:560px\"><p>Hi {{ ($('Find Open Referral').item.json.referrerName || '').trim().split(' ')[0] || 'there' }},</p><p>Good news: {{ $('Find Open Referral').item.json.leadName }} is now a client. None of this happens without your introduction.</p><p>As promised, {{ $('Won Deal Details').item.json.rewardText }} is on its way. Our team will send it over in the next few days.</p><p>Thank you again,<br>{{ $('Won Deal Details').item.json.senderName }}</p></div>",
-        "options": {
-          "appendAttribution": false,
-          "senderName": "={{ $('Won Deal Details').item.json.senderName }}"
-        }
-      },
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "REPLACE_WITH_CREDENTIAL_ID",
-          "name": "Gmail account"
-        }
-      },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 2000,
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "82ad09b8-78a5-4535-acf2-41ab4fa71351",
-      "name": "Mark Reward Sent",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
-      "position": [
-        1344,
-        496
-      ],
-      "parameters": {
-        "resource": "sheet",
-        "operation": "update",
-        "authentication": "oAuth2",
-        "documentId": {
-          "__rl": true,
-          "mode": "list",
-          "value": "",
-          "cachedResultName": "Referral Tracker"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "Sheet1"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "matchingColumns": [
-            "row_number"
-          ],
-          "value": {
-            "row_number": "={{ $('Find Open Referral').item.json.row_number }}",
-            "status": "reward due",
-            "rewardedAt": "={{ $now.toISO() }}"
-          },
-          "schema": [
-            {
-              "id": "row_number",
-              "displayName": "row_number",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "number",
-              "canBeUsedToMatch": true,
-              "readOnly": true
-            },
-            {
-              "id": "status",
-              "displayName": "status",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "rewardedAt",
-              "displayName": "rewardedAt",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            }
-          ]
-        },
-        "options": {}
-      },
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "REPLACE_WITH_CREDENTIAL_ID",
-          "name": "Google Sheets account"
-        }
-      },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 2000
-    },
-    {
-      "id": "1e243baa-6bf1-410c-ad5c-a73a56818e30",
-      "name": "Not a Referral Deal",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [
-        896,
-        688
-      ],
-      "parameters": {}
-    },
-    {
-      "id": "0efe1b42-4de8-4176-81ae-46046d9ebb23",
-      "name": "On Workflow Error",
-      "type": "n8n-nodes-base.errorTrigger",
-      "typeVersion": 1,
-      "position": [
-        0,
-        1008
-      ],
-      "parameters": {}
-    },
-    {
-      "id": "c657730c-180b-4417-b27e-efe19a46fc0f",
-      "name": "Format Error Details",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        224,
-        1008
-      ],
-      "parameters": {
-        "mode": "manual",
-        "includeOtherFields": false,
-        "assignments": {
-          "assignments": [
-            {
-              "id": "e1",
-              "name": "failedAt",
-              "value": "={{ $now.toISO() }}",
-              "type": "string"
-            },
-            {
-              "id": "e2",
-              "name": "workflow",
-              "value": "={{ $json.workflow?.name ?? \"unknown\" }}",
-              "type": "string"
-            },
-            {
-              "id": "e3",
-              "name": "failedNode",
-              "value": "={{ $json.execution?.lastNodeExecuted ?? \"unknown\" }}",
-              "type": "string"
-            },
-            {
-              "id": "e4",
-              "name": "errorMessage",
-              "value": "={{ ($json.execution?.error?.message ?? \"No message\").slice(0, 500) }}",
-              "type": "string"
-            },
-            {
-              "id": "e5",
-              "name": "executionUrl",
-              "value": "={{ $json.execution?.url ?? \"\" }}",
-              "type": "string"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "1f4fcc68-4b77-4391-bdc1-c2b89d757af9",
-      "name": "Alert #automation-alerts",
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 2.7,
-      "position": [
-        448,
-        912
-      ],
-      "parameters": {
-        "resource": "message",
-        "operation": "post",
-        "authentication": "oAuth2",
-        "select": "channel",
-        "channelId": {
-          "__rl": true,
-          "mode": "name",
-          "value": "automation-alerts"
-        },
-        "messageType": "text",
-        "text": "=:x: *{{ $json.workflow }} failed*\nNode: {{ $json.failedNode }}\nError: {{ $json.errorMessage }}\n<{{ $json.executionUrl }}|Open the failed run>",
-        "otherOptions": {
-          "includeLinkToWorkflow": false
-        }
-      },
-      "credentials": {
-        "slackOAuth2Api": {
-          "id": "REPLACE_WITH_CREDENTIAL_ID",
-          "name": "Slack account"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "80781a22-8dcd-4f5e-8067-1570b83a49a5",
-      "name": "Log to Error Sheet",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
-      "position": [
-        448,
-        1104
-      ],
-      "parameters": {
-        "resource": "sheet",
-        "operation": "append",
-        "authentication": "oAuth2",
-        "documentId": {
-          "__rl": true,
-          "mode": "list",
-          "value": "",
-          "cachedResultName": "Automation Error Log"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "Sheet1"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "value": {},
-          "schema": []
-        },
-        "options": {}
-      },
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "REPLACE_WITH_CREDENTIAL_ID",
-          "name": "Google Sheets account"
-        }
-      },
-      "onError": "continueRegularOutput"
     }
   ],
   "active": false,
   "pinData": {},
   "settings": {
     "binaryMode": "separate",
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
   },
-  "versionId": "37ca513d-1c6b-4b33-9cbc-d3a5b336e155",
+  "versionId": "b63d8def-99aa-4653-bb16-f73f5c864654",
   "nodeGroups": [],
   "connections": {
     "New Referral": {
@@ -1068,106 +637,6 @@
         [
           {
             "node": "Announce Referral",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Deal Won": {
-      "main": [
-        [
-          {
-            "node": "Won Deal Details",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Won Deal Details": {
-      "main": [
-        [
-          {
-            "node": "Find Open Referral",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Find Open Referral": {
-      "main": [
-        [
-          {
-            "node": "Was a Referral?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Was a Referral?": {
-      "main": [
-        [
-          {
-            "node": "Ask Finance to Send Reward",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Not a Referral Deal",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Ask Finance to Send Reward": {
-      "main": [
-        [
-          {
-            "node": "Tell Referrer the Good News",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Tell Referrer the Good News": {
-      "main": [
-        [
-          {
-            "node": "Mark Reward Sent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "On Workflow Error": {
-      "main": [
-        [
-          {
-            "node": "Format Error Details",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Error Details": {
-      "main": [
-        [
-          {
-            "node": "Alert #automation-alerts",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Log to Error Sheet",
             "type": "main",
             "index": 0
           }

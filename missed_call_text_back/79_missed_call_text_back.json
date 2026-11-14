@@ -12,8 +12,8 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.2,
       "position": [
-        0,
-        192
+        240,
+        492
       ],
       "parameters": {
         "httpMethod": "POST",
@@ -27,8 +27,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        224,
-        192
+        464,
+        492
       ],
       "parameters": {
         "mode": "manual",
@@ -81,8 +81,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        448,
-        192
+        688,
+        492
       ],
       "parameters": {
         "mode": "manual",
@@ -135,8 +135,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        672,
-        192
+        912,
+        492
       ],
       "parameters": {
         "conditions": {
@@ -166,8 +166,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        896,
-        96
+        1136,
+        396
       ],
       "parameters": {
         "respondWith": "text",
@@ -191,8 +191,8 @@
       "type": "n8n-nodes-base.hubspot",
       "typeVersion": 2.2,
       "position": [
-        1120,
-        96
+        1360,
+        396
       ],
       "parameters": {
         "resource": "contact",
@@ -253,8 +253,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1344,
-        96
+        1584,
+        396
       ],
       "parameters": {
         "conditions": {
@@ -284,8 +284,8 @@
       "type": "n8n-nodes-base.twilio",
       "typeVersion": 1,
       "position": [
-        1568,
-        0
+        1808,
+        300
       ],
       "parameters": {
         "resource": "sms",
@@ -306,8 +306,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1792,
-        96
+        2032,
+        396
       ],
       "parameters": {
         "conditions": {
@@ -337,8 +337,8 @@
       "type": "n8n-nodes-base.twilio",
       "typeVersion": 1,
       "position": [
-        1568,
-        192
+        1808,
+        492
       ],
       "parameters": {
         "resource": "sms",
@@ -359,8 +359,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        896,
-        288
+        1136,
+        588
       ],
       "parameters": {
         "respondWith": "text",
@@ -384,8 +384,8 @@
       "type": "n8n-nodes-base.hubspot",
       "typeVersion": 2.2,
       "position": [
-        2016,
-        32
+        2256,
+        332
       ],
       "parameters": {
         "resource": "engagement",
@@ -422,8 +422,8 @@
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2.7,
       "position": [
-        2240,
-        96
+        2480,
+        396
       ],
       "parameters": {
         "resource": "message",
@@ -458,8 +458,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2464,
-        96
+        2704,
+        396
       ],
       "parameters": {
         "mode": "manual",
@@ -518,8 +518,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        2688,
-        96
+        2928,
+        396
       ],
       "parameters": {
         "resource": "sheet",
@@ -553,437 +553,16 @@
       "maxTries": 3,
       "waitBetweenTries": 2000,
       "onError": "continueRegularOutput"
-    },
-    {
-      "id": "b6260ea9-c04e-4f1d-b841-e03e98212058",
-      "name": "Twilio Incoming SMS",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2.2,
-      "position": [
-        0,
-        896
-      ],
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "missed-call-reply",
-        "responseMode": "responseNode"
-      }
-    },
-    {
-      "id": "53ecff30-14b6-488d-9729-8e01312e3433",
-      "name": "Acknowledge SMS",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.5,
-      "position": [
-        224,
-        896
-      ],
-      "parameters": {
-        "respondWith": "text",
-        "responseBody": "<Response></Response>",
-        "options": {
-          "responseCode": 200,
-          "responseHeaders": {
-            "entries": [
-              {
-                "name": "Content-Type",
-                "value": "text/xml"
-              }
-            ]
-          }
-        }
-      }
-    },
-    {
-      "id": "642e983b-1507-4344-a782-310efcc2d4bc",
-      "name": "Normalize Reply",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        448,
-        896
-      ],
-      "parameters": {
-        "mode": "manual",
-        "includeOtherFields": false,
-        "assignments": {
-          "assignments": [
-            {
-              "id": "r1",
-              "name": "fromPhone",
-              "value": "={{ $json.body?.From ?? \"\" }}",
-              "type": "string"
-            },
-            {
-              "id": "r2",
-              "name": "text",
-              "value": "={{ String($json.body?.Body ?? \"\").trim().slice(0, 1000) }}",
-              "type": "string"
-            },
-            {
-              "id": "r3",
-              "name": "receivedAt",
-              "value": "={{ $now.toISO() }}",
-              "type": "string"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "4bdab7b2-33a7-4299-bfda-cfa05e35954b",
-      "name": "Classify Reply",
-      "type": "@n8n/n8n-nodes-langchain.textClassifier",
-      "typeVersion": 1.1,
-      "position": [
-        672,
-        896
-      ],
-      "parameters": {
-        "inputText": "={{ $json.text }}",
-        "categories": {
-          "categories": [
-            {
-              "category": "urgent",
-              "description": "Caller describes a deadline, emergency, angry tone, or asks for an immediate call back"
-            },
-            {
-              "category": "wants_booking",
-              "description": "Caller wants to schedule a meeting, consultation or call at a later time"
-            },
-            {
-              "category": "question",
-              "description": "Caller asks a question about services, pricing, hours or location"
-            },
-            {
-              "category": "opt_out",
-              "description": "Caller asks to stop texting, says wrong number, or is not interested"
-            }
-          ]
-        },
-        "options": {
-          "fallback": "other",
-          "enableAutoFixing": true
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "64a9be1f-678b-4589-a9b3-6289d43718fc",
-      "name": "Claude Model",
-      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
-      "typeVersion": 1.6,
-      "position": [
-        752,
-        1216
-      ],
-      "parameters": {
-        "model": {
-          "__rl": true,
-          "mode": "id",
-          "value": "claude-haiku-5-5"
-        },
-        "options": {
-          "maxTokensToSample": 300
-        }
-      },
-      "credentials": {}
-    },
-    {
-      "id": "b5df7cd3-e7e5-4d02-839e-8deb180bb696",
-      "name": "Tag: Urgent",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        1024,
-        512
-      ],
-      "parameters": {
-        "mode": "manual",
-        "includeOtherFields": true,
-        "assignments": {
-          "assignments": [
-            {
-              "id": "t1",
-              "name": "category",
-              "value": ":rotating_light: Urgent, call back now",
-              "type": "string"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "7bad3b71-90c0-4c5a-b95d-ad6c1cc6bba7",
-      "name": "Post Reply to Slack",
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 2.7,
-      "position": [
-        1248,
-        896
-      ],
-      "parameters": {
-        "resource": "message",
-        "operation": "post",
-        "authentication": "oAuth2",
-        "select": "channel",
-        "channelId": {
-          "__rl": true,
-          "mode": "name",
-          "value": "missed-calls"
-        },
-        "messageType": "text",
-        "text": "=*Text reply from {{ $('Normalize Reply').item.json.fromPhone }}*  {{ $json.category }}\n> {{ $('Normalize Reply').item.json.text }}",
-        "otherOptions": {
-          "includeLinkToWorkflow": false
-        }
-      },
-      "credentials": {
-        "slackOAuth2Api": {
-          "id": "REPLACE_WITH_CREDENTIAL_ID",
-          "name": "Slack account"
-        }
-      },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 2000,
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "02a61d3b-9b0f-41ae-99d5-c2f72afd98bb",
-      "name": "Tag: Wants Booking",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        1024,
-        704
-      ],
-      "parameters": {
-        "mode": "manual",
-        "includeOtherFields": true,
-        "assignments": {
-          "assignments": [
-            {
-              "id": "t2",
-              "name": "category",
-              "value": ":calendar: Wants to book",
-              "type": "string"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "153752d8-9d0b-4dec-be86-a1432e1816b5",
-      "name": "Tag: Question",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        1024,
-        896
-      ],
-      "parameters": {
-        "mode": "manual",
-        "includeOtherFields": true,
-        "assignments": {
-          "assignments": [
-            {
-              "id": "t3",
-              "name": "category",
-              "value": ":question: Question",
-              "type": "string"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "71fb5bd2-302a-4b9c-927e-364bca3d3244",
-      "name": "Tag: Opt Out",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        1024,
-        1088
-      ],
-      "parameters": {
-        "mode": "manual",
-        "includeOtherFields": true,
-        "assignments": {
-          "assignments": [
-            {
-              "id": "t4",
-              "name": "category",
-              "value": ":no_entry: Opt-out or wrong number. Do not text again",
-              "type": "string"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "b9e49200-065e-4678-8f3c-2fe5df389879",
-      "name": "Tag: Other",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        1024,
-        1280
-      ],
-      "parameters": {
-        "mode": "manual",
-        "includeOtherFields": true,
-        "assignments": {
-          "assignments": [
-            {
-              "id": "t5",
-              "name": "category",
-              "value": ":speech_balloon: Other",
-              "type": "string"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "ad5c7b82-a3dc-4791-9504-822f1403e717",
-      "name": "On Workflow Error",
-      "type": "n8n-nodes-base.errorTrigger",
-      "typeVersion": 1,
-      "position": [
-        0,
-        1600
-      ],
-      "parameters": {}
-    },
-    {
-      "id": "40ab3f32-d8f8-4ff1-8818-46d00fed76b6",
-      "name": "Format Error Details",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        224,
-        1600
-      ],
-      "parameters": {
-        "mode": "manual",
-        "includeOtherFields": false,
-        "assignments": {
-          "assignments": [
-            {
-              "id": "e1",
-              "name": "failedAt",
-              "value": "={{ $now.toISO() }}",
-              "type": "string"
-            },
-            {
-              "id": "e2",
-              "name": "workflow",
-              "value": "={{ $json.workflow?.name ?? \"unknown\" }}",
-              "type": "string"
-            },
-            {
-              "id": "e3",
-              "name": "failedNode",
-              "value": "={{ $json.execution?.lastNodeExecuted ?? \"unknown\" }}",
-              "type": "string"
-            },
-            {
-              "id": "e4",
-              "name": "errorMessage",
-              "value": "={{ ($json.execution?.error?.message ?? \"No message\").slice(0, 500) }}",
-              "type": "string"
-            },
-            {
-              "id": "e5",
-              "name": "executionUrl",
-              "value": "={{ $json.execution?.url ?? \"\" }}",
-              "type": "string"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "fee15531-3a65-4b72-8602-5c734a3151e9",
-      "name": "Alert #automation-alerts",
-      "type": "n8n-nodes-base.slack",
-      "typeVersion": 2.7,
-      "position": [
-        448,
-        1504
-      ],
-      "parameters": {
-        "resource": "message",
-        "operation": "post",
-        "authentication": "oAuth2",
-        "select": "channel",
-        "channelId": {
-          "__rl": true,
-          "mode": "name",
-          "value": "automation-alerts"
-        },
-        "messageType": "text",
-        "text": "=:x: *{{ $json.workflow }} failed*\nNode: {{ $json.failedNode }}\nError: {{ $json.errorMessage }}\n<{{ $json.executionUrl }}|Open the failed run>",
-        "otherOptions": {
-          "includeLinkToWorkflow": false
-        }
-      },
-      "credentials": {
-        "slackOAuth2Api": {
-          "id": "REPLACE_WITH_CREDENTIAL_ID",
-          "name": "Slack account"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "13666d5e-50b7-4b0d-be57-b3f14187cf29",
-      "name": "Log to Error Sheet",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.7,
-      "position": [
-        448,
-        1696
-      ],
-      "parameters": {
-        "resource": "sheet",
-        "operation": "append",
-        "authentication": "oAuth2",
-        "documentId": {
-          "__rl": true,
-          "mode": "list",
-          "value": "",
-          "cachedResultName": "Automation Error Log"
-        },
-        "sheetName": {
-          "__rl": true,
-          "mode": "name",
-          "value": "Sheet1"
-        },
-        "columns": {
-          "mappingMode": "autoMapInputData",
-          "value": {},
-          "schema": []
-        },
-        "options": {}
-      },
-      "credentials": {
-        "googleSheetsOAuth2Api": {
-          "id": "REPLACE_WITH_CREDENTIAL_ID",
-          "name": "Google Sheets account"
-        }
-      },
-      "onError": "continueRegularOutput"
     }
   ],
   "active": false,
   "pinData": {},
   "settings": {
     "binaryMode": "separate",
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
   },
-  "versionId": "7345d00b-4595-4fc4-b24b-e33f44d2bd63",
+  "versionId": "5edad87c-76a6-4dfa-afb3-688927191afe",
   "nodeGroups": [],
   "connections": {
     "Twilio Call Status": {
@@ -1144,171 +723,6 @@
         [
           {
             "node": "Log Missed Call",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Twilio Incoming SMS": {
-      "main": [
-        [
-          {
-            "node": "Acknowledge SMS",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Acknowledge SMS": {
-      "main": [
-        [
-          {
-            "node": "Normalize Reply",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Normalize Reply": {
-      "main": [
-        [
-          {
-            "node": "Classify Reply",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Classify Reply": {
-      "main": [
-        [
-          {
-            "node": "Tag: Urgent",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Tag: Wants Booking",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Tag: Question",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Tag: Opt Out",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Tag: Other",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Claude Model": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Classify Reply",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Tag: Urgent": {
-      "main": [
-        [
-          {
-            "node": "Post Reply to Slack",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Tag: Wants Booking": {
-      "main": [
-        [
-          {
-            "node": "Post Reply to Slack",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Tag: Question": {
-      "main": [
-        [
-          {
-            "node": "Post Reply to Slack",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Tag: Opt Out": {
-      "main": [
-        [
-          {
-            "node": "Post Reply to Slack",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Tag: Other": {
-      "main": [
-        [
-          {
-            "node": "Post Reply to Slack",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "On Workflow Error": {
-      "main": [
-        [
-          {
-            "node": "Format Error Details",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Error Details": {
-      "main": [
-        [
-          {
-            "node": "Alert #automation-alerts",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Log to Error Sheet",
             "type": "main",
             "index": 0
           }

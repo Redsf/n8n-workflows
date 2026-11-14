@@ -1,0 +1,132 @@
+{
+  "id": "aa9nv8Rdb69qSFuj",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Lead Revival Reply Alert",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "62c96124-18ba-4d1d-9a9d-65f2a0bfcf2e",
+      "name": "Reply Received",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 15,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "simple": true,
+        "filters": {
+          "q": "subject:\"Re: Checking in\" is:unread in:inbox",
+          "readStatus": "unread"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "id": "7ad921b2-55d5-4cd9-b214-16ca1c30d3e1",
+      "name": "Alert Rep of Reply",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        464,
+        300
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "lead-revival"
+        },
+        "messageType": "text",
+        "text": "=:tada: *A revived lead replied*\nFrom: {{ $json.From }}\nSubject: {{ $json.Subject }}\n> {{ $json.snippet }}\nReply from your inbox while it is warm.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "3797726f-6920-4ffd-9cb2-da4e212808d0",
+      "name": "Mark Reply as Read",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        688,
+        300
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "markAsRead",
+        "messageId": "={{ $('Reply Received').item.json.id }}"
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "cba526a8-24bc-42e4-812b-ae64d5d0ab93",
+  "nodeGroups": [],
+  "connections": {
+    "Reply Received": {
+      "main": [
+        [
+          {
+            "node": "Alert Rep of Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Rep of Reply": {
+      "main": [
+        [
+          {
+            "node": "Mark Reply as Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

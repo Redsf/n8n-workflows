@@ -1,0 +1,395 @@
+{
+  "id": "AEA5mslHRCxAxsHi",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Referral Reward on Deal Won",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "038bc135-10d0-4a95-9282-db3b74abfa8c",
+      "name": "Deal Won",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        396
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "referral-deal-won",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "c4352b55-20aa-4324-8158-df40b524f3e5",
+      "name": "Won Deal Details",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        464,
+        396
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "w1",
+              "name": "leadEmail",
+              "value": "={{ String($json.body?.contactEmail ?? $json.body?.email ?? \"\").trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "w2",
+              "name": "dealName",
+              "value": "={{ $json.body?.dealName ?? \"a new project\" }}",
+              "type": "string"
+            },
+            {
+              "id": "w3",
+              "name": "amount",
+              "value": "={{ $json.body?.amount ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "w4",
+              "name": "senderName",
+              "value": "Alex from Your Company",
+              "type": "string"
+            },
+            {
+              "id": "w5",
+              "name": "rewardText",
+              "value": "a $250 thank-you gift card",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "32207099-4b97-4ac7-8412-7c62770af7d3",
+      "name": "Find Open Referral",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        688,
+        396
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Referral Tracker"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "leadEmail",
+              "lookupValue": "={{ $json.leadEmail }}"
+            },
+            {
+              "lookupColumn": "status",
+              "lookupValue": "referred"
+            }
+          ]
+        },
+        "combineFilters": "AND",
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "bccf2079-7f60-4ac5-910e-2224177f806f",
+      "name": "Was a Referral?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        912,
+        396
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.referrerEmail ?? \"\" }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "3f0247a7-b408-4092-b564-9e64f42e66e7",
+      "name": "Ask Finance to Send Reward",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1136,
+        300
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "finance"
+        },
+        "messageType": "text",
+        "text": "=:gift: *Referral reward due*\n{{ $json.referrerName?.trim() || $json.referrerEmail }} ({{ $json.referrerEmail }}) referred {{ $json.leadName }}, who just signed: {{ $('Won Deal Details').item.json.dealName }}{{ $('Won Deal Details').item.json.amount ? ' ($' + Number($('Won Deal Details').item.json.amount).toLocaleString('en-US') + ')' : '' }}.\nPlease send {{ $('Won Deal Details').item.json.rewardText }}.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "3e2331f8-3281-482e-87c0-9c66f3b494a7",
+      "name": "Tell Referrer the Good News",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1360,
+        300
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Find Open Referral').item.json.referrerEmail }}",
+        "subject": "Your referral just became a client",
+        "emailType": "html",
+        "message": "=<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;max-width:560px\"><p>Hi {{ ($('Find Open Referral').item.json.referrerName || '').trim().split(' ')[0] || 'there' }},</p><p>Good news: {{ $('Find Open Referral').item.json.leadName }} is now a client. None of this happens without your introduction.</p><p>As promised, {{ $('Won Deal Details').item.json.rewardText }} is on its way. Our team will send it over in the next few days.</p><p>Thank you again,<br>{{ $('Won Deal Details').item.json.senderName }}</p></div>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "={{ $('Won Deal Details').item.json.senderName }}"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "82ad09b8-78a5-4535-acf2-41ab4fa71351",
+      "name": "Mark Reward Sent",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1584,
+        300
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "update",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Referral Tracker"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "row_number"
+          ],
+          "value": {
+            "row_number": "={{ $('Find Open Referral').item.json.row_number }}",
+            "status": "reward due",
+            "rewardedAt": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "rewardedAt",
+              "displayName": "rewardedAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "1e243baa-6bf1-410c-ad5c-a73a56818e30",
+      "name": "Not a Referral Deal",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1136,
+        492
+      ],
+      "parameters": {}
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "7850fe66-6e7c-42f4-9d21-f29015301081",
+  "nodeGroups": [],
+  "connections": {
+    "Deal Won": {
+      "main": [
+        [
+          {
+            "node": "Won Deal Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Won Deal Details": {
+      "main": [
+        [
+          {
+            "node": "Find Open Referral",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Open Referral": {
+      "main": [
+        [
+          {
+            "node": "Was a Referral?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Was a Referral?": {
+      "main": [
+        [
+          {
+            "node": "Ask Finance to Send Reward",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not a Referral Deal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask Finance to Send Reward": {
+      "main": [
+        [
+          {
+            "node": "Tell Referrer the Good News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tell Referrer the Good News": {
+      "main": [
+        [
+          {
+            "node": "Mark Reward Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

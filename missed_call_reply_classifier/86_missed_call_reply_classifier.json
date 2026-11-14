@@ -1,0 +1,450 @@
+{
+  "id": "Ie74x7NOLg4Uibpd",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Missed-Call Reply Classifier",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "b6260ea9-c04e-4f1d-b841-e03e98212058",
+      "name": "Twilio Incoming SMS",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        684
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "missed-call-reply",
+        "responseMode": "responseNode"
+      }
+    },
+    {
+      "id": "53ecff30-14b6-488d-9729-8e01312e3433",
+      "name": "Acknowledge SMS",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        464,
+        684
+      ],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "<Response></Response>",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/xml"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "642e983b-1507-4344-a782-310efcc2d4bc",
+      "name": "Normalize Reply",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        688,
+        684
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r1",
+              "name": "fromPhone",
+              "value": "={{ $json.body?.From ?? \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "r2",
+              "name": "text",
+              "value": "={{ String($json.body?.Body ?? \"\").trim().slice(0, 1000) }}",
+              "type": "string"
+            },
+            {
+              "id": "r3",
+              "name": "receivedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "4bdab7b2-33a7-4299-bfda-cfa05e35954b",
+      "name": "Classify Reply",
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        912,
+        684
+      ],
+      "parameters": {
+        "inputText": "={{ $json.text }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "urgent",
+              "description": "Caller describes a deadline, emergency, angry tone, or asks for an immediate call back"
+            },
+            {
+              "category": "wants_booking",
+              "description": "Caller wants to schedule a meeting, consultation or call at a later time"
+            },
+            {
+              "category": "question",
+              "description": "Caller asks a question about services, pricing, hours or location"
+            },
+            {
+              "category": "opt_out",
+              "description": "Caller asks to stop texting, says wrong number, or is not interested"
+            }
+          ]
+        },
+        "options": {
+          "fallback": "other",
+          "enableAutoFixing": true
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "64a9be1f-678b-4589-a9b3-6289d43718fc",
+      "name": "Claude Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        992,
+        1004
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-haiku-5-5"
+        },
+        "options": {
+          "maxTokensToSample": 300
+        }
+      },
+      "credentials": {}
+    },
+    {
+      "id": "b5df7cd3-e7e5-4d02-839e-8deb180bb696",
+      "name": "Tag: Urgent",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1264,
+        300
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "t1",
+              "name": "category",
+              "value": ":rotating_light: Urgent, call back now",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "7bad3b71-90c0-4c5a-b95d-ad6c1cc6bba7",
+      "name": "Post Reply to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1488,
+        684
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "missed-calls"
+        },
+        "messageType": "text",
+        "text": "=*Text reply from {{ $('Normalize Reply').item.json.fromPhone }}*  {{ $json.category }}\n> {{ $('Normalize Reply').item.json.text }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "02a61d3b-9b0f-41ae-99d5-c2f72afd98bb",
+      "name": "Tag: Wants Booking",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1264,
+        492
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "t2",
+              "name": "category",
+              "value": ":calendar: Wants to book",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "153752d8-9d0b-4dec-be86-a1432e1816b5",
+      "name": "Tag: Question",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1264,
+        684
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "t3",
+              "name": "category",
+              "value": ":question: Question",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "71fb5bd2-302a-4b9c-927e-364bca3d3244",
+      "name": "Tag: Opt Out",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1264,
+        876
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "t4",
+              "name": "category",
+              "value": ":no_entry: Opt-out or wrong number. Do not text again",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "b9e49200-065e-4678-8f3c-2fe5df389879",
+      "name": "Tag: Other",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1264,
+        1068
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "t5",
+              "name": "category",
+              "value": ":speech_balloon: Other",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "834a44e5-dcc8-48ac-8fb1-aa74de9302fe",
+  "nodeGroups": [],
+  "connections": {
+    "Twilio Incoming SMS": {
+      "main": [
+        [
+          {
+            "node": "Acknowledge SMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acknowledge SMS": {
+      "main": [
+        [
+          {
+            "node": "Normalize Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Reply": {
+      "main": [
+        [
+          {
+            "node": "Classify Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Reply": {
+      "main": [
+        [
+          {
+            "node": "Tag: Urgent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tag: Wants Booking",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tag: Question",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tag: Opt Out",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tag: Other",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Classify Reply",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag: Urgent": {
+      "main": [
+        [
+          {
+            "node": "Post Reply to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag: Wants Booking": {
+      "main": [
+        [
+          {
+            "node": "Post Reply to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag: Question": {
+      "main": [
+        [
+          {
+            "node": "Post Reply to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag: Opt Out": {
+      "main": [
+        [
+          {
+            "node": "Post Reply to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag: Other": {
+      "main": [
+        [
+          {
+            "node": "Post Reply to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

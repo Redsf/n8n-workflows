@@ -1,0 +1,850 @@
+{
+  "id": "d9Mf1WP8dyk7Umnq",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "AI Lead Intake & Scoring",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "8be30033-fa8d-47e2-be4e-15591e6b341d",
+      "name": "New Lead",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        240
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-intake",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "87c1737a-d0b9-4a98-ac42-4c123d24c76b"
+    },
+    {
+      "id": "d762f9c9-91b3-4fa2-aa69-e42f49ad72e8",
+      "name": "Intake Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        240
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "i1",
+              "name": "businessName",
+              "value": "Your Company",
+              "type": "string"
+            },
+            {
+              "id": "i2",
+              "name": "idealClient",
+              "value": "US small and mid-size professional-services firms (accounting, insurance, wealth management, real estate) with 5-200 staff that want to automate client intake, onboarding and back-office work. Budget usually $2k-$25k per project.",
+              "type": "string"
+            },
+            {
+              "id": "i3",
+              "name": "bookingUrl",
+              "value": "https://calendly.com/your-team/discovery-call",
+              "type": "string"
+            },
+            {
+              "id": "i4",
+              "name": "senderName",
+              "value": "Your Company Team",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "7b38dc0c-f043-4e9a-b89d-ff771c5bb43d",
+      "name": "Normalize Lead",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        240
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "n1",
+              "name": "firstName",
+              "value": "={{ ($json.body.firstName || ($json.body.name || '').split(' ')[0] || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "n2",
+              "name": "lastName",
+              "value": "={{ ($json.body.lastName || ($json.body.name || '').split(' ').slice(1).join(' ') || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "n3",
+              "name": "email",
+              "value": "={{ ($json.body.email || '').trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "n4",
+              "name": "company",
+              "value": "={{ ($json.body.company || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "n5",
+              "name": "website",
+              "value": "={{ ($json.body.website || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "n6",
+              "name": "teamSize",
+              "value": "={{ $json.body.teamSize || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "n7",
+              "name": "budget",
+              "value": "={{ $json.body.budget || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "n8",
+              "name": "message",
+              "value": "={{ ($json.body.message || '').trim().slice(0, 3000) }}",
+              "type": "string"
+            },
+            {
+              "id": "n9",
+              "name": "receivedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "fb8c62f2-7d75-4561-a747-e1d6329babd4",
+      "name": "Valid Lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        240
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test($json.email) }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "2172e95e-dce9-4f1b-a708-ce835f49f5b9",
+      "name": "Confirm Lead",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        144
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": true, \"message\": \"Thanks! We will be in touch shortly.\" }",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "6b33a249-d920-4cc6-a93c-fe9ec1d9b988",
+      "name": "Find Existing Contact",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        144
+      ],
+      "parameters": {
+        "resource": "contact",
+        "operation": "search",
+        "authentication": "oAuth2",
+        "returnAll": false,
+        "limit": 1,
+        "filterGroupsUi": {
+          "filterGroupsValues": [
+            {
+              "filtersUi": {
+                "filterValues": [
+                  {
+                    "propertyName": "email|string",
+                    "operator": "EQ",
+                    "value": "={{ $('Normalize Lead').item.json.email }}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "properties": [
+            "firstname",
+            "lastname",
+            "hubspot_owner_id",
+            "lifecyclestage"
+          ]
+        }
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "08f37e59-28fe-4790-aabd-1447cc2d8a8d",
+      "name": "Returning Lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        144
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.id }}",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "e1e0dae6-075c-4ac0-8b44-857f732482e8",
+      "name": "Notify Rep of Returning Lead",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1632,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "sales"
+        },
+        "messageType": "text",
+        "text": "=:repeat: *Returning lead*: {{ $('Normalize Lead').item.json.firstName }} {{ $('Normalize Lead').item.json.lastName }} ({{ $('Normalize Lead').item.json.email }}) at {{ $('Normalize Lead').item.json.company || 'unknown company' }} wrote in again.\n> {{ $('Normalize Lead').item.json.message || 'No message' }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "f109b229-8be1-424d-bce5-9f69d588f664"
+    },
+    {
+      "id": "d1c32fa5-ff7e-4332-96fe-c49e4fca0aed",
+      "name": "Score Lead",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1568,
+        304
+      ],
+      "parameters": {
+        "promptType": "define",
+        "hasOutputParser": true,
+        "text": "=Lead: {{ $('Normalize Lead').item.json.firstName }} {{ $('Normalize Lead').item.json.lastName }}, {{ $('Normalize Lead').item.json.email }}\nCompany: {{ $('Normalize Lead').item.json.company || 'not given' }} ({{ $('Normalize Lead').item.json.website || 'no website' }})\nTeam size: {{ $('Normalize Lead').item.json.teamSize || 'not given' }}  Budget: {{ $('Normalize Lead').item.json.budget || 'not given' }}\nMessage: {{ $('Normalize Lead').item.json.message || 'none' }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "=You qualify inbound leads for {{ $('Normalize Lead').item.json.businessName }}. Ideal client: {{ $('Normalize Lead').item.json.idealClient }}\nScore 0-100 for fit and intent. tier = hot (70+, clear fit and need), warm (40-69), cold (under 40, spam, students, job seekers, vendors). Free-mail addresses and empty messages lower the score. Be concise and factual; never invent details."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "6167a5f7-adc6-4733-a649-fab2e347b4b6",
+      "name": "Claude Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        1584,
+        528
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-5-5"
+        },
+        "options": {
+          "maxTokensToSample": 600,
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gateway credits"
+        }
+      }
+    },
+    {
+      "id": "d0e0b8ce-4cbf-4e7b-8b33-298b9113229a",
+      "name": "Lead Score Schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1712,
+        528
+      ],
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{ \"score\": 82, \"tier\": \"hot\", \"industry\": \"accounting\", \"need\": \"Automate client intake and document collection\", \"reason\": \"Fits the ideal client: 40-person CPA firm, clear pain, budget stated\", \"suggestedNextStep\": \"Book a discovery call this week\" }"
+      }
+    },
+    {
+      "id": "75a627e6-5c67-4cb1-9a6d-dd7969767752",
+      "name": "Save Lead to HubSpot",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1920,
+        304
+      ],
+      "parameters": {
+        "resource": "contact",
+        "operation": "upsert",
+        "authentication": "oAuth2",
+        "email": "={{ $('Normalize Lead').item.json.email }}",
+        "additionalFields": {
+          "firstName": "={{ $('Normalize Lead').item.json.firstName }}",
+          "lastName": "={{ $('Normalize Lead').item.json.lastName }}",
+          "companyName": "={{ $('Normalize Lead').item.json.company }}",
+          "websiteUrl": "={{ $('Normalize Lead').item.json.website }}",
+          "message": "={{ $('Normalize Lead').item.json.message }}",
+          "lifeCycleStage": "lead",
+          "leadStatus": "={{ $('Score Lead').item.json.output.tier === 'hot' ? 'OPEN' : 'NEW' }}"
+        }
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "aff5ff6d-6d98-4419-b4e1-ff2da9ca550f",
+      "name": "Route by Tier",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        2144,
+        288
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "hot",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Score Lead').item.json.output.tier }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "hot"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "warm",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Score Lead').item.json.output.tier }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "warm"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "cold"
+        }
+      }
+    },
+    {
+      "id": "a9b088a8-5dd1-4143-812d-6fbaffc46705",
+      "name": "Create Deal",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        2368,
+        112
+      ],
+      "parameters": {
+        "resource": "deal",
+        "operation": "create",
+        "authentication": "oAuth2",
+        "stage": "appointmentscheduled",
+        "additionalFields": {
+          "dealName": "={{ $('Normalize Lead').item.json.company || $('Normalize Lead').item.json.lastName }} - {{ $('Score Lead').item.json.output.need }}",
+          "description": "=Score {{ $('Score Lead').item.json.output.score }}: {{ $('Score Lead').item.json.output.reason }}",
+          "associatedVids": "={{ [$('Save Lead to HubSpot').item.json.vid] }}"
+        }
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "e179b3bf-bcc9-4416-a044-4d231cb020c9",
+      "name": "Alert Sales",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        2592,
+        112
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "sales"
+        },
+        "messageType": "text",
+        "text": "=:fire: *Hot lead ({{ $('Score Lead').item.json.output.score }}/100)*: {{ $('Normalize Lead').item.json.firstName }} {{ $('Normalize Lead').item.json.lastName }} at {{ $('Normalize Lead').item.json.company || 'unknown company' }}\nNeed: {{ $('Score Lead').item.json.output.need }}\nWhy: {{ $('Score Lead').item.json.output.reason }}\nNext step: {{ $('Score Lead').item.json.output.suggestedNextStep }}\nEmail: {{ $('Normalize Lead').item.json.email }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "b489d69f-7330-4eea-8b0f-d65a35c62f27"
+    },
+    {
+      "id": "bebb83a5-ca06-4d82-8d3c-90ef37aeabb1",
+      "name": "Log Lead",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2816,
+        304
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "receivedAt": "={{ $('Normalize Lead').item.json.receivedAt }}",
+            "email": "={{ $('Normalize Lead').item.json.email }}",
+            "name": "={{ $('Normalize Lead').item.json.firstName }} {{ $('Normalize Lead').item.json.lastName }}",
+            "company": "={{ $('Normalize Lead').item.json.company }}",
+            "score": "={{ $('Score Lead').item.json.output.score }}",
+            "tier": "={{ $('Score Lead').item.json.output.tier }}",
+            "reason": "={{ $('Score Lead').item.json.output.reason }}"
+          },
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "5c4771c9-9b7a-4518-a2f4-da82b23d3409",
+      "name": "Send Booking Invite",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2592,
+        304
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Normalize Lead').item.json.email }}",
+        "subject": "=Thanks for reaching out, {{ $('Normalize Lead').item.json.firstName || 'there' }}",
+        "emailType": "text",
+        "message": "=Hi {{ $('Normalize Lead').item.json.firstName || 'there' }},\n\nThanks for contacting {{ $('Normalize Lead').item.json.businessName }}. It sounds like we could help with {{ $('Score Lead').item.json.output.need.toLowerCase() }}. If you would like to talk it through, pick a time here:\n{{ $('Normalize Lead').item.json.bookingUrl }}\n\n{{ $('Normalize Lead').item.json.senderName }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "69d14935-78c4-496d-9edb-a6146ff73b59"
+    },
+    {
+      "id": "0b826051-bcb4-463e-91c3-e78cd2b727e2",
+      "name": "Send Thank-you",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2592,
+        496
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Normalize Lead').item.json.email }}",
+        "subject": "=We received your message",
+        "emailType": "text",
+        "message": "=Hi {{ $('Normalize Lead').item.json.firstName || 'there' }},\n\nThanks for getting in touch with {{ $('Normalize Lead').item.json.businessName }}. We have your message and will reply if it is a fit for what we do.\n\n{{ $('Normalize Lead').item.json.senderName }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "bdf25c4b-a3ab-410b-808d-abd0b663c831"
+    },
+    {
+      "id": "dbb89cef-aee9-4613-8691-d45cf4256abc",
+      "name": "Reject Invalid Lead",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        336
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": false, \"error\": \"A valid email is required\" }",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "acf30590-e60a-4724-837b-484e16ffaf17",
+  "nodeGroups": [],
+  "connections": {
+    "New Lead": {
+      "main": [
+        [
+          {
+            "node": "Intake Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intake Settings": {
+      "main": [
+        [
+          {
+            "node": "Normalize Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Lead": {
+      "main": [
+        [
+          {
+            "node": "Valid Lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid Lead?": {
+      "main": [
+        [
+          {
+            "node": "Confirm Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject Invalid Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm Lead": {
+      "main": [
+        [
+          {
+            "node": "Find Existing Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Existing Contact": {
+      "main": [
+        [
+          {
+            "node": "Returning Lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Returning Lead?": {
+      "main": [
+        [
+          {
+            "node": "Notify Rep of Returning Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Score Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Lead": {
+      "main": [
+        [
+          {
+            "node": "Save Lead to HubSpot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Score Lead",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Score Schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Score Lead",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Lead to HubSpot": {
+      "main": [
+        [
+          {
+            "node": "Route by Tier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Tier": {
+      "main": [
+        [
+          {
+            "node": "Create Deal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Booking Invite",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Thank-you",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Deal": {
+      "main": [
+        [
+          {
+            "node": "Alert Sales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Sales": {
+      "main": [
+        [
+          {
+            "node": "Log Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Booking Invite": {
+      "main": [
+        [
+          {
+            "node": "Log Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Thank-you": {
+      "main": [
+        [
+          {
+            "node": "Log Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

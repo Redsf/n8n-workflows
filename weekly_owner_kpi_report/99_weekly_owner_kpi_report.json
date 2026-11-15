@@ -1,0 +1,564 @@
+{
+  "id": "wosop4jPdtEzt1Iq",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Weekly Owner KPI Report",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "c4f65900-d082-4824-a95b-51d68efaa018",
+      "name": "Mondays 7 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        112
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * 1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "a55f4f5f-3305-46aa-a8aa-9d49803d64ad",
+      "name": "Report Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        112
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "k1",
+              "name": "businessName",
+              "value": "Your Company",
+              "type": "string"
+            },
+            {
+              "id": "k2",
+              "name": "ownerEmail",
+              "value": "owner@example.com",
+              "type": "string"
+            },
+            {
+              "id": "k3",
+              "name": "weekStart",
+              "value": "={{ $now.minus(7, 'days').toFormat('yyyy-MM-dd') }}",
+              "type": "string"
+            },
+            {
+              "id": "k4",
+              "name": "weekStartMs",
+              "value": "={{ $now.minus(7, 'days').startOf('day').toMillis() }}",
+              "type": "number"
+            },
+            {
+              "id": "k5",
+              "name": "revenueGoal",
+              "value": 25000,
+              "type": "number"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "67069905-4e8f-47bd-b42f-dff7dd732d78",
+      "name": "Get Invoices This Week",
+      "type": "n8n-nodes-base.quickbooks",
+      "typeVersion": 1,
+      "position": [
+        448,
+        112
+      ],
+      "parameters": {
+        "resource": "invoice",
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "query": "=SELECT * FROM Invoice WHERE TxnDate >= '{{ $('Report Settings').first().json.weekStart }}'"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "quickBooksOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "QuickBooks Online"
+        }
+      }
+    },
+    {
+      "id": "17bb0c3b-4129-4d65-bc63-a6915e0132ca",
+      "name": "Get Payments This Week",
+      "type": "n8n-nodes-base.quickbooks",
+      "typeVersion": 1,
+      "position": [
+        672,
+        112
+      ],
+      "parameters": {
+        "resource": "payment",
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "query": "=SELECT * FROM Payment WHERE TxnDate >= '{{ $('Report Settings').first().json.weekStart }}'"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "quickBooksOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "QuickBooks Online"
+        }
+      }
+    },
+    {
+      "id": "bc307608-0216-43f1-9a55-5bd9679d8474",
+      "name": "Get Overdue Invoices",
+      "type": "n8n-nodes-base.quickbooks",
+      "typeVersion": 1,
+      "position": [
+        896,
+        112
+      ],
+      "parameters": {
+        "resource": "invoice",
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "query": "=SELECT * FROM Invoice WHERE Balance > '0' AND DueDate < '{{ $now.toFormat('yyyy-MM-dd') }}'"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "quickBooksOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "QuickBooks Online"
+        }
+      }
+    },
+    {
+      "id": "98ac0988-73e4-4045-b80e-e114767a2a01",
+      "name": "Get New Leads",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        112
+      ],
+      "parameters": {
+        "resource": "contact",
+        "operation": "search",
+        "authentication": "oAuth2",
+        "returnAll": true,
+        "filterGroupsUi": {
+          "filterGroupsValues": [
+            {
+              "filtersUi": {
+                "filterValues": [
+                  {
+                    "propertyName": "createdate|datetime",
+                    "operator": "GTE",
+                    "value": "={{ $('Report Settings').first().json.weekStartMs }}"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "properties": [
+            "email",
+            "lifecyclestage"
+          ]
+        }
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "ea2c5e79-28f8-43f0-93af-1835e2ec7e2f",
+      "name": "Get Deals Won",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        112
+      ],
+      "parameters": {
+        "resource": "deal",
+        "operation": "search",
+        "authentication": "oAuth2",
+        "returnAll": true,
+        "filterGroupsUi": {
+          "filterGroupsValues": [
+            {
+              "filtersUi": {
+                "filterValues": [
+                  {
+                    "propertyName": "closedate|datetime",
+                    "operator": "GTE",
+                    "value": "={{ $('Report Settings').first().json.weekStartMs }}"
+                  },
+                  {
+                    "propertyName": "dealstage|enumeration",
+                    "operator": "EQ",
+                    "value": "closedwon"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "includeFields": [
+            "dealname",
+            "amount"
+          ]
+        }
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "c7824a5a-4f39-4f2c-9779-7507c935e063",
+      "name": "Calculate KPIs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        112
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const real = (name) => $(name).all().map((i) => i.json).filter((j) => j && Object.keys(j).length);\nconst sum = (rows, f) => rows.reduce((t, r) => t + Number(f(r) || 0), 0);\nconst s = $('Report Settings').first().json;\nconst inv = real('Get Invoices This Week'), pay = real('Get Payments This Week'), od = real('Get Overdue Invoices');\nconst leads = real('Get New Leads'), won = real('Get Deals Won');\nconst money = (n) => '$' + Math.round(n).toLocaleString('en-US');\nconst k = {\n  weekStart: s.weekStart,\n  invoiced: sum(inv, (r) => r.TotalAmt), invoiceCount: inv.length,\n  collected: sum(pay, (r) => r.TotalAmt),\n  overdueBalance: sum(od, (r) => r.Balance), overdueCount: od.length,\n  newLeads: leads.length,\n  dealsWon: won.length, wonValue: sum(won, (r) => r.properties?.amount),\n  revenueGoal: s.revenueGoal,\n};\nk.goalPct = k.revenueGoal ? Math.round((k.collected / k.revenueGoal) * 100) : null;\nk.table = ['Invoiced: ' + money(k.invoiced) + ' (' + k.invoiceCount + ' invoices)', 'Collected: ' + money(k.collected) + (k.goalPct !== null ? ' (' + k.goalPct + '% of weekly goal)' : ''),\n  'Overdue: ' + money(k.overdueBalance) + ' across ' + k.overdueCount + ' invoices', 'New leads: ' + k.newLeads, 'Deals won: ' + k.dealsWon + ' worth ' + money(k.wonValue)].join('\\n');\nreturn [{ json: k }];"
+      }
+    },
+    {
+      "id": "701c1d48-f621-4f35-bb4e-6f5cd9ca21c3",
+      "name": "Write Owner Summary",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1792,
+        112
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "=Week starting {{ $json.weekStart }}:\n{{ $json.table }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "You write a 3-sentence Monday note for a small-business owner from these weekly numbers. Say what went well, what needs attention (overdue money first), and one concrete action for this week. Plain words, no hype, no invented numbers."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "c433ab9e-4d00-451c-ad56-58f3d5c23910",
+      "name": "Claude Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        1872,
+        336
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-haiku-5-5"
+        },
+        "options": {
+          "maxTokensToSample": 300,
+          "temperature": 0.3
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gateway credits"
+        }
+      }
+    },
+    {
+      "id": "01cf3db4-277e-40f0-be3d-eb60d59e041d",
+      "name": "Post KPI Report",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        2144,
+        112
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "leadership"
+        },
+        "messageType": "text",
+        "text": "=:bar_chart: *Weekly numbers, week of {{ $('Calculate KPIs').first().json.weekStart }}*\n{{ $('Calculate KPIs').first().json.table }}\n\n{{ $json.text }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "e19d457e-4e93-4c22-be32-9484815bd3f3"
+    },
+    {
+      "id": "6156e2e8-9651-4456-85cb-58384c12bbd4",
+      "name": "Email Owner",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2368,
+        112
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Report Settings').first().json.ownerEmail }}",
+        "subject": "={{ $('Report Settings').first().json.businessName }} weekly numbers: week of {{ $('Calculate KPIs').first().json.weekStart }}",
+        "emailType": "text",
+        "message": "={{ $('Write Owner Summary').first().json.text }}\n\n{{ $('Calculate KPIs').first().json.table }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "09abd362-0d82-4959-a3e1-ccfd50aff37f"
+    },
+    {
+      "id": "dec74083-8a4b-4957-b749-9933c9ed2da6",
+      "name": "Log KPIs",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2592,
+        112
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "weekStart": "={{ $('Calculate KPIs').first().json.weekStart }}",
+            "invoiced": "={{ $('Calculate KPIs').first().json.invoiced }}",
+            "collected": "={{ $('Calculate KPIs').first().json.collected }}",
+            "overdueBalance": "={{ $('Calculate KPIs').first().json.overdueBalance }}",
+            "newLeads": "={{ $('Calculate KPIs').first().json.newLeads }}",
+            "dealsWon": "={{ $('Calculate KPIs').first().json.dealsWon }}",
+            "wonValue": "={{ $('Calculate KPIs').first().json.wonValue }}"
+          },
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "c730f71f-8f62-4566-aa3e-2b56285e4a44",
+  "nodeGroups": [],
+  "connections": {
+    "Mondays 7 AM": {
+      "main": [
+        [
+          {
+            "node": "Report Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report Settings": {
+      "main": [
+        [
+          {
+            "node": "Get Invoices This Week",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Invoices This Week": {
+      "main": [
+        [
+          {
+            "node": "Get Payments This Week",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Payments This Week": {
+      "main": [
+        [
+          {
+            "node": "Get Overdue Invoices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Overdue Invoices": {
+      "main": [
+        [
+          {
+            "node": "Get New Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get New Leads": {
+      "main": [
+        [
+          {
+            "node": "Get Deals Won",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Deals Won": {
+      "main": [
+        [
+          {
+            "node": "Calculate KPIs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate KPIs": {
+      "main": [
+        [
+          {
+            "node": "Write Owner Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Owner Summary": {
+      "main": [
+        [
+          {
+            "node": "Post KPI Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Write Owner Summary",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post KPI Report": {
+      "main": [
+        [
+          {
+            "node": "Email Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Owner": {
+      "main": [
+        [
+          {
+            "node": "Log KPIs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

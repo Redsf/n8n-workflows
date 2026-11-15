@@ -1,0 +1,848 @@
+{
+  "id": "BQfaB1m9wZA1TZeS",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Estimate Request to AI Quote",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "5d627424-ac86-4dfc-bc9b-9fb08f24c8b7",
+      "name": "Estimate Requested",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        208
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "estimate-request",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "f9c6abca-20cb-4c00-8a31-771e7458f9f8"
+    },
+    {
+      "id": "11d691c6-f2a4-45c8-901e-d35f982581fb",
+      "name": "Quote Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        208
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "q1",
+              "name": "businessName",
+              "value": "Your Landscaping Co.",
+              "type": "string"
+            },
+            {
+              "id": "q2",
+              "name": "priceBook",
+              "value": "Lawn mowing: $55 per visit up to 1/4 acre, +$20 per extra 1/4 acre\nSpring cleanup: $65/hour, 2-person crew, typical yard 3-5 hours\nMulch install: $95 per cubic yard installed\nShrub trimming: $8 per shrub, $45 minimum\nSod install: $1.90 per sq ft\nIrrigation repair: $95 service call + $65/hour + parts\nDump fee: $60 per load",
+              "type": "string"
+            },
+            {
+              "id": "q3",
+              "name": "templateDocId",
+              "value": "PLACEHOLDER_QUOTE_TEMPLATE_DOC_ID",
+              "type": "string"
+            },
+            {
+              "id": "q4",
+              "name": "outputFolderId",
+              "value": "PLACEHOLDER_QUOTES_FOLDER_ID",
+              "type": "string"
+            },
+            {
+              "id": "q5",
+              "name": "siteVisitBookingUrl",
+              "value": "https://calendly.com/your-company/site-visit",
+              "type": "string"
+            },
+            {
+              "id": "q6",
+              "name": "quoteStageId",
+              "value": "presentationscheduled",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "63e1e98a-d7b6-40d4-94f5-e77895fa730b",
+      "name": "Normalize Request",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        208
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "n1",
+              "name": "name",
+              "value": "={{ ($json.body.name || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "n2",
+              "name": "email",
+              "value": "={{ ($json.body.email || '').trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "n3",
+              "name": "phone",
+              "value": "={{ $json.body.phone || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "n4",
+              "name": "address",
+              "value": "={{ $json.body.address || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "n5",
+              "name": "service",
+              "value": "={{ $json.body.service || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "n6",
+              "name": "details",
+              "value": "={{ ($json.body.details || '').slice(0, 3000) }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "a04c3c33-1319-4c43-ae9d-d014d7f56d12",
+      "name": "Valid Request?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        208
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test($json.email) }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            },
+            {
+              "leftValue": "={{ $json.details }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "f5246fb0-b372-4813-8cb4-4c353d22675c",
+      "name": "Confirm Request",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        112
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": true, \"message\": \"Thanks! Your estimate is on its way.\" }",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "e8c4a954-e78e-432c-9781-a30647e8d594",
+      "name": "Save Contact to HubSpot",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        112
+      ],
+      "parameters": {
+        "resource": "contact",
+        "operation": "upsert",
+        "authentication": "oAuth2",
+        "email": "={{ $('Normalize Request').item.json.email }}",
+        "additionalFields": {
+          "firstName": "={{ $('Normalize Request').item.json.name.split(' ')[0] }}",
+          "lastName": "={{ $('Normalize Request').item.json.name.split(' ').slice(1).join(' ') }}",
+          "phoneNumber": "={{ $('Normalize Request').item.json.phone }}",
+          "streetAddress": "={{ $('Normalize Request').item.json.address }}",
+          "lifeCycleStage": "lead"
+        }
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "1efc0d98-47bf-4099-bd5e-1751b5004a59",
+      "name": "Draft Quote with AI",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1344,
+        112
+      ],
+      "parameters": {
+        "promptType": "define",
+        "hasOutputParser": true,
+        "text": "=Service requested: {{ $('Normalize Request').item.json.service }}\nAddress: {{ $('Normalize Request').item.json.address }}\nCustomer description: {{ $('Normalize Request').item.json.details }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "=You draft estimates for {{ $('Normalize Request').item.json.businessName }}. Price ONLY from this price book and never invent services or prices:\n{{ $('Normalize Request').item.json.priceBook }}\nState every assumption about size or quantity. amount = quantity x unitPrice, total = sum of amounts. If the job is too vague or large to price without seeing it, set siteVisitNeeded true and confidence low."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "886af416-83ed-45e7-a65c-4a3420b81598",
+      "name": "Claude Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        1360,
+        336
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-5-5"
+        },
+        "options": {
+          "maxTokensToSample": 900,
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gateway credits"
+        }
+      }
+    },
+    {
+      "id": "09e21fd6-ba02-4028-837b-6c25732ed50a",
+      "name": "Quote Schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1488,
+        336
+      ],
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{ \"scopeSummary\": \"Spring cleanup of front and back beds, mulch refresh\", \"lineItems\": [{ \"description\": \"Spring cleanup, 2-person crew, est. 4 hours\", \"quantity\": 4, \"unitPrice\": 65, \"amount\": 260 }, { \"description\": \"Mulch install\", \"quantity\": 3, \"unitPrice\": 95, \"amount\": 285 }], \"total\": 545, \"assumptions\": [\"Beds are about 600 sq ft\", \"Debris hauled in one load\"], \"siteVisitNeeded\": false, \"confidence\": \"medium\" }"
+      }
+    },
+    {
+      "id": "b6c1871c-d2bd-41c3-8c3c-572a07e429dd",
+      "name": "Build Quote Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        112
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const req = $('Normalize Request').item.json;\nconst q = $json.output;\nconst money = (n) => '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\nreturn { json: { ...req, ...q,\n  lineItemsText: q.lineItems.map((l) => l.description + ' - ' + l.quantity + ' x ' + money(l.unitPrice) + ' = ' + money(l.amount)).join('\\n'),\n  totalText: money(q.total), assumptionsText: (q.assumptions || []).map((a) => '- ' + a).join('\\n'),\n  quoteDate: $now.toFormat('MMMM d, yyyy'), validUntil: $now.plus(30, 'days').toFormat('MMMM d, yyyy'),\n  fileName: 'Estimate - ' + req.name + ' - ' + $now.toFormat('yyyy-MM-dd') } };"
+      }
+    },
+    {
+      "id": "38fc59a0-dd30-4432-8973-51b63ff2ec48",
+      "name": "Copy Quote Template",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1920,
+        112
+      ],
+      "parameters": {
+        "resource": "file",
+        "operation": "copy",
+        "authentication": "oAuth2",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.templateDocId }}"
+        },
+        "name": "={{ $json.fileName }}",
+        "sameFolder": false,
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.outputFolderId }}"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Drive"
+        }
+      }
+    },
+    {
+      "id": "e6a059f5-94a3-4736-b372-1c9f82a97569",
+      "name": "Fill Quote",
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2144,
+        112
+      ],
+      "parameters": {
+        "resource": "document",
+        "operation": "update",
+        "authentication": "oAuth2",
+        "documentURL": "={{ $json.id }}",
+        "simple": true,
+        "actionsUi": {
+          "actionFields": [
+            {
+              "object": "text",
+              "action": "replaceAll",
+              "text": "{{customer_name}}",
+              "replaceText": "={{ $('Build Quote Data').item.json.name }}",
+              "matchCase": true
+            },
+            {
+              "object": "text",
+              "action": "replaceAll",
+              "text": "{{address}}",
+              "replaceText": "={{ $('Build Quote Data').item.json.address }}",
+              "matchCase": true
+            },
+            {
+              "object": "text",
+              "action": "replaceAll",
+              "text": "{{scope}}",
+              "replaceText": "={{ $('Build Quote Data').item.json.scopeSummary }}",
+              "matchCase": true
+            },
+            {
+              "object": "text",
+              "action": "replaceAll",
+              "text": "{{line_items}}",
+              "replaceText": "={{ $('Build Quote Data').item.json.lineItemsText }}",
+              "matchCase": true
+            },
+            {
+              "object": "text",
+              "action": "replaceAll",
+              "text": "{{total}}",
+              "replaceText": "={{ $('Build Quote Data').item.json.totalText }}",
+              "matchCase": true
+            },
+            {
+              "object": "text",
+              "action": "replaceAll",
+              "text": "{{assumptions}}",
+              "replaceText": "={{ $('Build Quote Data').item.json.assumptionsText }}",
+              "matchCase": true
+            },
+            {
+              "object": "text",
+              "action": "replaceAll",
+              "text": "{{quote_date}}",
+              "replaceText": "={{ $('Build Quote Data').item.json.quoteDate }}",
+              "matchCase": true
+            },
+            {
+              "object": "text",
+              "action": "replaceAll",
+              "text": "{{valid_until}}",
+              "replaceText": "={{ $('Build Quote Data').item.json.validUntil }}",
+              "matchCase": true
+            }
+          ]
+        }
+      },
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Docs"
+        }
+      }
+    },
+    {
+      "id": "9f763417-736e-487d-9f7d-bc7f7a6ce856",
+      "name": "Approve Quote",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        2368,
+        112
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendAndWait",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "estimates"
+        },
+        "message": "=*Estimate for {{ $('Build Quote Data').item.json.name }}* ({{ $('Build Quote Data').item.json.address }}): *{{ $('Build Quote Data').item.json.totalText }}*\n{{ $('Build Quote Data').item.json.scopeSummary }}\n{{ $('Build Quote Data').item.json.lineItemsText }}\nAssumptions:\n{{ $('Build Quote Data').item.json.assumptionsText }}\nSite visit needed: {{ $('Build Quote Data').item.json.siteVisitNeeded ? 'yes' : 'no' }} | AI confidence: {{ $('Build Quote Data').item.json.confidence }}\nDraft: https://docs.google.com/document/d/{{ $('Copy Quote Template').item.json.id }}/edit",
+        "responseType": "approval",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "Send to customer",
+            "disapproveLabel": "I will edit it"
+          }
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "limitType": "afterTimeInterval",
+              "resumeAmount": 2,
+              "resumeUnit": "days"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "588fe699-f301-4775-aaba-28c507008d3f"
+    },
+    {
+      "id": "9174f394-ccd0-4b16-a61c-e6539472a271",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2592,
+        112
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.data.approved }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "8373ca22-983d-4993-8ab0-238ef6b78e79",
+      "name": "Export Quote as PDF",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2816,
+        16
+      ],
+      "parameters": {
+        "resource": "file",
+        "operation": "download",
+        "authentication": "oAuth2",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Copy Quote Template').item.json.id }}"
+        },
+        "options": {
+          "binaryPropertyName": "data",
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "application/pdf"
+            }
+          },
+          "fileName": "={{ $('Build Quote Data').item.json.fileName }}.pdf"
+        }
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Drive"
+        }
+      }
+    },
+    {
+      "id": "37fffb0d-4460-48bc-a5cc-583413f2f837",
+      "name": "Email Quote",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3040,
+        16
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Build Quote Data').item.json.email }}",
+        "subject": "=Your estimate from {{ $('Build Quote Data').item.json.businessName }}",
+        "emailType": "text",
+        "message": "=Hi {{ $('Build Quote Data').item.json.name.split(' ')[0] }},\n\nThanks for reaching out. Your estimate for {{ $('Build Quote Data').item.json.scopeSummary.toLowerCase() }} is attached: {{ $('Build Quote Data').item.json.totalText }}, valid until {{ $('Build Quote Data').item.json.validUntil }}.\n{{ $('Build Quote Data').item.json.siteVisitNeeded ? '\\nWe would like to see the site to confirm the details. Pick a time here: ' + $('Build Quote Data').item.json.siteVisitBookingUrl + '\\n' : '' }}\nReply to this email to approve or ask questions.\n\n{{ $('Build Quote Data').item.json.businessName }}",
+        "options": {
+          "appendAttribution": false,
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "data"
+              }
+            ]
+          }
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "5e454a47-3657-4240-9ff5-d807307c1b01"
+    },
+    {
+      "id": "42daf4ba-ebb6-421f-b7ab-c1742c57e872",
+      "name": "Create Deal",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        3264,
+        16
+      ],
+      "parameters": {
+        "resource": "deal",
+        "operation": "create",
+        "authentication": "oAuth2",
+        "stage": "={{ $('Build Quote Data').item.json.quoteStageId }}",
+        "additionalFields": {
+          "dealName": "={{ $('Build Quote Data').item.json.name }} - {{ $('Build Quote Data').item.json.service || 'estimate' }}",
+          "amount": "={{ $('Build Quote Data').item.json.total }}",
+          "description": "={{ $('Build Quote Data').item.json.scopeSummary }}",
+          "associatedVids": "={{ [$('Save Contact to HubSpot').item.json.vid] }}"
+        }
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "48773b79-c81c-48b0-b3e1-c99aaf7b794d",
+      "name": "Note Quote on Hold",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        2816,
+        208
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "estimates"
+        },
+        "messageType": "text",
+        "text": "=:pencil2: Estimate for {{ $('Build Quote Data').item.json.name }} was not sent. Edit the draft and send it by hand: https://docs.google.com/document/d/{{ $('Copy Quote Template').item.json.id }}/edit",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "01b5c26f-7dd1-46d0-bee7-d5ab88db3e24"
+    },
+    {
+      "id": "458ab45d-4a5f-4173-8fd2-8614eae22104",
+      "name": "Reject Invalid Request",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        304
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": false, \"error\": \"Email and job details are required\" }",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "3ba2ac4c-7bcc-4928-a344-a6dcbea4d009",
+  "nodeGroups": [],
+  "connections": {
+    "Estimate Requested": {
+      "main": [
+        [
+          {
+            "node": "Quote Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quote Settings": {
+      "main": [
+        [
+          {
+            "node": "Normalize Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Request": {
+      "main": [
+        [
+          {
+            "node": "Valid Request?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid Request?": {
+      "main": [
+        [
+          {
+            "node": "Confirm Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject Invalid Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm Request": {
+      "main": [
+        [
+          {
+            "node": "Save Contact to HubSpot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Contact to HubSpot": {
+      "main": [
+        [
+          {
+            "node": "Draft Quote with AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft Quote with AI": {
+      "main": [
+        [
+          {
+            "node": "Build Quote Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Draft Quote with AI",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quote Schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Draft Quote with AI",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Quote Data": {
+      "main": [
+        [
+          {
+            "node": "Copy Quote Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy Quote Template": {
+      "main": [
+        [
+          {
+            "node": "Fill Quote",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fill Quote": {
+      "main": [
+        [
+          {
+            "node": "Approve Quote",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approve Quote": {
+      "main": [
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Export Quote as PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Note Quote on Hold",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Export Quote as PDF": {
+      "main": [
+        [
+          {
+            "node": "Email Quote",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Quote": {
+      "main": [
+        [
+          {
+            "node": "Create Deal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

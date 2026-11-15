@@ -2,7 +2,7 @@
 
 [![validate](https://github.com/Redsf/n8n-workflows/actions/workflows/validate.yml/badge.svg)](https://github.com/Redsf/n8n-workflows/actions/workflows/validate.yml)
 
-A collection of 70 production-style n8n automations covering AI agents, RAG knowledge systems, e-commerce operations, real estate, and HR document processing. Each workflow lives in its own folder as a ready-to-import JSON file with a README explaining what it does, how it's wired, and how to configure it.
+A collection of 81 production-style n8n automations covering AI agents, RAG knowledge systems, e-commerce operations, real estate, and HR document processing. Each workflow lives in its own folder as a ready-to-import JSON file with a README explaining what it does, how it's wired, and how to configure it.
 
 These solve real operational problems: recovering abandoned carts, qualifying and routing leads, extracting data from invoices, answering questions with grounded AI, and keeping teams informed without manual busywork.
 
@@ -43,7 +43,7 @@ Credentials are referenced by name only. No API keys, tokens, or secrets are sto
 ## Quality checks
 
 Every push runs [`scripts/validate_workflows.py`](scripts/validate_workflows.py)
-across all 70 workflows, plus a gitleaks scan of the working tree.
+across all 81 workflows, plus a gitleaks scan of the working tree.
 
 **Blocking (fails the build):**
 
@@ -58,7 +58,7 @@ across all 70 workflows, plus a gitleaks scan of the working tree.
 - Disabled nodes left on the canvas
 
 The advisory checks are deliberately not blocking, because they describe
-reliability posture rather than correctness. Worth knowing: **22 of 70
+reliability posture rather than correctness. Worth knowing: **22 of 81
 workflows currently have an active Error Trigger.** The rest will fail silently
 if you activate them as-is. The validator tells you which ones on every run.
 
@@ -163,7 +163,7 @@ Add `--strict` to treat the advisory warnings as failures.
 
 ### Lead Generation & Sales
 
-Built for small and mid-size US service firms (accounting, wealth management, insurance, real estate, professional services). Each one has its own error handling, human approval before anything client-facing goes out where it matters, and a log sheet.
+Built for small and mid-size US service firms (accounting, wealth management, insurance, real estate, professional services). Errors go to the shared Workflow Error Handler, with human approval before anything client-facing goes out where it matters, and a log sheet.
 
 | # | Workflow | Summary |
 |---|----------|---------|
@@ -178,6 +178,24 @@ Built for small and mid-size US service firms (accounting, wealth management, in
 | 68 | [Missed-Call Reply Classifier](missed_call_reply_classifier) | Sorts texts sent back after a missed-call text with AI (urgent, booking, question, opt-out) and posts them to Slack. |
 | 69 | [Lead Revival Reply Alert](lead_revival_reply_alert) | Watches Gmail for replies to revival emails and alerts the rep in Slack. |
 | 70 | [Referral Reward on Deal Won](referral_reward_on_deal_won) | On closed-won, asks finance to send the referral reward, emails the referrer and marks the reward sent exactly once. |
+
+### Business Operations
+
+Money, onboarding, reviews and industry workflows for the same kind of firms: accounting and CPA, insurance, real estate and home services. Errors go to the shared [Workflow Error Handler](workflow_error_handler).
+
+| # | Workflow | Summary |
+|---|----------|---------|
+| 71 | [Unpaid Invoice Chaser](unpaid_invoice_chaser) | Chases overdue QuickBooks invoices with friendly, firm and final reminders, alerts the owner on final notices, and logs every reminder. |
+| 72 | [Review Request After a Job](review_request_after_job) | Asks for a rating after each job; happy customers get the Google review link, unhappy ones go to the owner with a HubSpot recovery task. |
+| 73 | [AI Lead Intake & Scoring](ai_lead_intake_scoring) | Scores website leads 0-100 with Claude against your ideal client, saves them to HubSpot, and routes hot, warm and cold leads differently. |
+| 74 | [Client Onboarding Kickoff](client_onboarding_kickoff) | On signing, creates the client folder and document checklist, sends a welcome email with upload and kickoff links, and briefs the team. |
+| 75 | [Client Document Upload Check](client_document_upload_check) | Hosted upload form that files each document to Drive, has Claude match it to the checklist, and emails the client what is still needed. |
+| 76 | [Missing Document Chaser](missing_document_chaser) | Daily tax-season reminders for missing client documents with a deadline countdown, escalating to the preparer after three ignored emails. |
+| 77 | [IRS & State Notice Triage](irs_state_notice_triage) | Claude reads forwarded IRS or state notice PDFs, extracts the deadline and amount, creates a HubSpot task, and flags urgent notices. |
+| 78 | [Policy Renewal Chaser](policy_renewal_chaser) | Contacts insurance clients 60, 30 and 7 days before renewal by email, task and text, sending each notice only once. |
+| 79 | [Estimate Request to AI Quote](estimate_request_ai_quote) | Claude prices estimate requests from your price book into a Google Docs quote, owner approves in Slack, PDF is emailed and a deal is created. |
+| 80 | [Real Estate Deal Deadline Tracker](real_estate_deal_deadline_tracker) | Daily scan of contract deadlines (inspection, appraisal, financing, closing) with agent reminders, overdue alerts and a team board. |
+| 81 | [Weekly Owner KPI Report](weekly_owner_kpi_report) | Monday report of invoiced, collected, overdue, new leads and deals won from QuickBooks and HubSpot, with a short Claude-written note. |
 
 ## Stack
 

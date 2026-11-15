@@ -1,0 +1,607 @@
+{
+  "id": "M9jFwm7MdKVGcbPx",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Review Request After a Job",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "beb229db-a9ec-4ad5-8a16-cbb12865ee20",
+      "name": "Job Completed",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        192
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "job-completed",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "cfee2d12-831a-436b-8c5b-2e1c57660ba7"
+    },
+    {
+      "id": "61dfe0ab-9494-41b7-b155-de8c7e5c4938",
+      "name": "Review Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        192
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r1",
+              "name": "businessName",
+              "value": "Your Company",
+              "type": "string"
+            },
+            {
+              "id": "r2",
+              "name": "googleReviewUrl",
+              "value": "https://g.page/r/YOUR-PLACE-ID/review",
+              "type": "string"
+            },
+            {
+              "id": "r3",
+              "name": "senderName",
+              "value": "The team at Your Company",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "f769bb59-2129-492b-a970-7844d8344451",
+      "name": "Normalize Job",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        192
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "n1",
+              "name": "firstName",
+              "value": "={{ ($json.body.firstName || $json.body.name || 'there').trim().split(' ')[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "n2",
+              "name": "email",
+              "value": "={{ ($json.body.email || '').trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "n3",
+              "name": "jobType",
+              "value": "={{ $json.body.jobType || 'recent service' }}",
+              "type": "string"
+            },
+            {
+              "id": "n4",
+              "name": "jobId",
+              "value": "={{ $json.body.jobId || '' }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "554d1601-cab9-46af-9960-dc060e334a66",
+      "name": "Valid Job?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        192
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test($json.email) }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "5f762b6a-4f7e-41f2-a4cc-fa586d53ef70",
+      "name": "Confirm Job",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        96
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": true }",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "348bf0dd-8b30-4501-a07f-0a797edd6893",
+      "name": "Wait 2 Hours",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        96
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 2,
+        "unit": "hours"
+      },
+      "webhookId": "61228eab-f684-4aa0-ad33-6b09dd976488"
+    },
+    {
+      "id": "8c770e26-73b3-4a0d-a81e-7b9146875683",
+      "name": "Ask for Rating",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        96
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendAndWait",
+        "sendTo": "={{ $('Normalize Job').item.json.email }}",
+        "subject": "=How did we do, {{ $('Normalize Job').item.json.firstName }}?",
+        "message": "=Hi {{ $('Normalize Job').item.json.firstName }},\n\nThanks for choosing {{ $('Normalize Job').item.json.businessName }} for your {{ $('Normalize Job').item.json.jobType }}. Could you take 10 seconds to tell us how it went?",
+        "responseType": "customForm",
+        "defineForm": "fields",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "How would you rate us?",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "5 - Excellent"
+                  },
+                  {
+                    "option": "4 - Good"
+                  },
+                  {
+                    "option": "3 - Okay"
+                  },
+                  {
+                    "option": "2 - Poor"
+                  },
+                  {
+                    "option": "1 - Very poor"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Anything we could do better?",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false,
+          "messageButtonLabel": "Rate your visit",
+          "responseFormTitle": "How did we do?",
+          "limitWaitTime": {
+            "values": {
+              "limitType": "afterTimeInterval",
+              "resumeAmount": 7,
+              "resumeUnit": "days"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "8c5e0b48-4577-4a9d-b85f-06135023c4b6"
+    },
+    {
+      "id": "ef51b267-91ec-4564-bdac-303a797a4f27",
+      "name": "Read Rating",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1568,
+        96
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "rating",
+              "value": "={{ parseInt(($json.data?.['How would you rate us?'] || '0').charAt(0)) || 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "s2",
+              "name": "comment",
+              "value": "={{ $json.data?.['Anything we could do better?'] || '' }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "5c21d653-5677-4de5-bacc-8272bb642ca0",
+      "name": "Happy Customer?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1792,
+        96
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.rating }}",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              },
+              "rightValue": 4
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "5ddee6c7-56e8-4b69-988d-80c7b301c3b9",
+      "name": "Send Google Review Link",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2240,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Normalize Job').item.json.email }}",
+        "subject": "=Thank you! One small favor",
+        "emailType": "text",
+        "message": "=Hi {{ $('Normalize Job').item.json.firstName }},\n\nThank you, that made our day. Would you share it on Google? It takes a minute and really helps a local business like ours:\n\n{{ $('Normalize Job').item.json.googleReviewUrl }}\n\n{{ $('Normalize Job').item.json.senderName }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "1e585dd5-48d1-44eb-b7cb-2e5eb820cf55"
+    },
+    {
+      "id": "88cdda1b-a9ea-47a8-a5d6-8f03e3e81164",
+      "name": "Log Feedback",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2464,
+        96
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "respondedAt": "={{ $now.toISO() }}",
+            "jobId": "={{ $('Normalize Job').item.json.jobId }}",
+            "email": "={{ $('Normalize Job').item.json.email }}",
+            "jobType": "={{ $('Normalize Job').item.json.jobType }}",
+            "rating": "={{ $('Read Rating').item.json.rating }}",
+            "comment": "={{ $('Read Rating').item.json.comment }}"
+          },
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "b37565bb-eaf9-4d7e-8841-9ef4d6277095",
+      "name": "Alert Owner",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        2016,
+        192
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "customer-feedback"
+        },
+        "messageType": "text",
+        "text": "=:warning: *{{ $json.rating || 'No' }}-star feedback* from {{ $('Normalize Job').item.json.firstName }} ({{ $('Normalize Job').item.json.email }}) after {{ $('Normalize Job').item.json.jobType }}\n> {{ $json.comment || 'No comment left' }}\nPlease call them today.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "ec4b6d78-ea9c-4485-851d-23b1c3fcccb3"
+    },
+    {
+      "id": "0264164e-1316-4709-b8a5-a6af936af3e0",
+      "name": "Create Recovery Task",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        2240,
+        192
+      ],
+      "parameters": {
+        "resource": "engagement",
+        "operation": "create",
+        "authentication": "oAuth2",
+        "type": "task",
+        "metadata": {
+          "subject": "=Call unhappy customer: {{ $('Normalize Job').item.json.firstName }} ({{ $('Normalize Job').item.json.email }})",
+          "body": "=Rated {{ $('Read Rating').item.json.rating }}/5 after {{ $('Normalize Job').item.json.jobType }}. Comment: {{ $('Read Rating').item.json.comment || 'none' }}",
+          "status": "NOT_STARTED"
+        },
+        "additionalFields": {},
+        "dueDate": "={{ $now.plus(1, 'day').toFormat('yyyy-MM-dd HH:mm:ss') }}"
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "3fac19f9-012e-41e3-8af6-11b079398dcb",
+      "name": "Reject Invalid Job",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        288
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": false, \"error\": \"A valid customer email is required\" }",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "effa9565-38bc-4cd4-b275-272d79143ebb",
+  "nodeGroups": [],
+  "connections": {
+    "Job Completed": {
+      "main": [
+        [
+          {
+            "node": "Review Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review Settings": {
+      "main": [
+        [
+          {
+            "node": "Normalize Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Job": {
+      "main": [
+        [
+          {
+            "node": "Valid Job?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid Job?": {
+      "main": [
+        [
+          {
+            "node": "Confirm Job",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject Invalid Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm Job": {
+      "main": [
+        [
+          {
+            "node": "Wait 2 Hours",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 2 Hours": {
+      "main": [
+        [
+          {
+            "node": "Ask for Rating",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask for Rating": {
+      "main": [
+        [
+          {
+            "node": "Read Rating",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Rating": {
+      "main": [
+        [
+          {
+            "node": "Happy Customer?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Happy Customer?": {
+      "main": [
+        [
+          {
+            "node": "Send Google Review Link",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alert Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Google Review Link": {
+      "main": [
+        [
+          {
+            "node": "Log Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Owner": {
+      "main": [
+        [
+          {
+            "node": "Create Recovery Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Recovery Task": {
+      "main": [
+        [
+          {
+            "node": "Log Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

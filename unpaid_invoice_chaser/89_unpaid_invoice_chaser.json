@@ -1,0 +1,477 @@
+{
+  "id": "Rz1rjV2C2iMPpzVP",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Unpaid Invoice Chaser",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "a1e6d81c-ea8e-48ce-908b-a0ee5d13b6de",
+      "name": "Weekdays 9 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        192
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "b0c54ca9-5b65-44e1-98a5-0fcf6a0bf50d",
+      "name": "Chaser Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        192
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "businessName",
+              "value": "Your Company",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "senderName",
+              "value": "Accounts Team, Your Company",
+              "type": "string"
+            },
+            {
+              "id": "c3",
+              "name": "paymentInstructions",
+              "value": "You can pay online using the link in your original invoice email, or reply to this email and we will help.",
+              "type": "string"
+            },
+            {
+              "id": "c4",
+              "name": "today",
+              "value": "={{ $now.toFormat('yyyy-MM-dd') }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "58106bb8-7ae5-4fe5-a5df-81e230e50dc1",
+      "name": "Get Overdue Invoices",
+      "type": "n8n-nodes-base.quickbooks",
+      "typeVersion": 1,
+      "position": [
+        448,
+        192
+      ],
+      "parameters": {
+        "resource": "invoice",
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "query": "=SELECT * FROM Invoice WHERE Balance > '0' AND DueDate < '{{ $json.today }}'"
+        }
+      },
+      "credentials": {
+        "quickBooksOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "QuickBooks Online"
+        }
+      }
+    },
+    {
+      "id": "a8783b08-c1a2-4d3d-a325-bd783b93c8db",
+      "name": "Pick Invoices to Chase",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        192
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Remind on day 1, 7 and 14 overdue, then every 7 days. Skip invoices without an email.\nconst today = new Date($('Chaser Settings').first().json.today + 'T00:00:00Z');\nconst out = [];\nfor (const item of $input.all()) {\n  const inv = item.json;\n  const email = inv.BillEmail?.Address;\n  if (!email || !inv.DueDate) continue;\n  const days = Math.round((today - new Date(inv.DueDate + 'T00:00:00Z')) / 86400000);\n  const due = days === 1 || days === 7 || days === 14 || (days >= 21 && days % 7 === 0);\n  if (!due) continue;\n  const stage = days < 7 ? 'friendly' : days < 21 ? 'firm' : 'final';\n  out.push({ json: {\n    invoiceId: inv.Id, invoiceNumber: inv.DocNumber || inv.Id, customer: inv.CustomerRef?.name || 'there',\n    email, balance: Number(inv.Balance || 0).toFixed(2), dueDate: inv.DueDate, daysOverdue: days, stage,\n  } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "dc22d065-70ee-4ff0-a769-cbf7a14c0f6a",
+      "name": "Route by Stage",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        896,
+        176
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "friendly",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "friendly"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "firm",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "firm"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "final",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "final"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a6c731cf-467d-45b7-bbf3-4f582850d80f",
+      "name": "Send Friendly Reminder",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Quick reminder: invoice {{ $json.invoiceNumber }}",
+        "emailType": "text",
+        "message": "=Hi {{ $json.customer }},\n\nJust a friendly reminder that invoice {{ $json.invoiceNumber }} for ${{ $json.balance }} was due on {{ $json.dueDate }}. If you have already paid, thank you and please ignore this note.\n\n{{ $('Chaser Settings').first().json.paymentInstructions }}\n\nThanks,\n{{ $('Chaser Settings').first().json.senderName }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "9edb44e7-f576-4b85-ac1b-9a042d349fda"
+    },
+    {
+      "id": "91d022d3-acda-4269-8c77-2b10481f8df1",
+      "name": "Log Reminder",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1568,
+        192
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "sentAt": "={{ $now.toISO() }}",
+            "invoiceNumber": "={{ $('Pick Invoices to Chase').item.json.invoiceNumber }}",
+            "customer": "={{ $('Pick Invoices to Chase').item.json.customer }}",
+            "email": "={{ $('Pick Invoices to Chase').item.json.email }}",
+            "balance": "={{ $('Pick Invoices to Chase').item.json.balance }}",
+            "daysOverdue": "={{ $('Pick Invoices to Chase').item.json.daysOverdue }}",
+            "stage": "={{ $('Pick Invoices to Chase').item.json.stage }}"
+          },
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "6328fa19-bcda-4f2c-b168-05a3aee86d5a",
+      "name": "Send Firm Reminder",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        192
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Invoice {{ $json.invoiceNumber }} is {{ $json.daysOverdue }} days overdue",
+        "emailType": "text",
+        "message": "=Hi {{ $json.customer }},\n\nInvoice {{ $json.invoiceNumber }} for ${{ $json.balance }} is now {{ $json.daysOverdue }} days past its due date of {{ $json.dueDate }}. Please arrange payment this week, or reply to let us know when we can expect it.\n\n{{ $('Chaser Settings').first().json.paymentInstructions }}\n\nThank you,\n{{ $('Chaser Settings').first().json.senderName }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "0b4d8b70-d348-4c89-85cb-3a7bf83f310c"
+    },
+    {
+      "id": "86793b1c-3bc0-4de5-9ab7-b10a681fe3e4",
+      "name": "Send Final Notice",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        384
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Final notice: invoice {{ $json.invoiceNumber }}",
+        "emailType": "text",
+        "message": "=Hi {{ $json.customer }},\n\nWe still have not received payment for invoice {{ $json.invoiceNumber }} (${{ $json.balance }}, due {{ $json.dueDate }}, now {{ $json.daysOverdue }} days overdue). Please pay or contact us within 5 business days so we can avoid pausing work on your account.\n\n{{ $('Chaser Settings').first().json.paymentInstructions }}\n\nRegards,\n{{ $('Chaser Settings').first().json.senderName }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "576b6c28-85de-41e0-8c9a-80ea6f87173d"
+    },
+    {
+      "id": "3a82b3b4-7c7d-4b6b-bd49-b59c216ecaa9",
+      "name": "Alert Owner",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1344,
+        384
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "accounts-receivable"
+        },
+        "messageType": "text",
+        "text": "=:rotating_light: *Final notice sent* to {{ $('Route by Stage').item.json.customer }} for invoice {{ $('Route by Stage').item.json.invoiceNumber }}: ${{ $('Route by Stage').item.json.balance }}, {{ $('Route by Stage').item.json.daysOverdue }} days overdue. Time for a phone call.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "c4d474a5-25a2-49b8-b273-d7931a2912df"
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "7b5ca89a-5724-4325-9a92-ccbfb6147d67",
+  "nodeGroups": [],
+  "connections": {
+    "Weekdays 9 AM": {
+      "main": [
+        [
+          {
+            "node": "Chaser Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chaser Settings": {
+      "main": [
+        [
+          {
+            "node": "Get Overdue Invoices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Overdue Invoices": {
+      "main": [
+        [
+          {
+            "node": "Pick Invoices to Chase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick Invoices to Chase": {
+      "main": [
+        [
+          {
+            "node": "Route by Stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Stage": {
+      "main": [
+        [
+          {
+            "node": "Send Friendly Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Firm Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Final Notice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Friendly Reminder": {
+      "main": [
+        [
+          {
+            "node": "Log Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Firm Reminder": {
+      "main": [
+        [
+          {
+            "node": "Log Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Final Notice": {
+      "main": [
+        [
+          {
+            "node": "Alert Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Owner": {
+      "main": [
+        [
+          {
+            "node": "Log Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

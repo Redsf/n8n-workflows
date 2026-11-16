@@ -1,0 +1,500 @@
+{
+  "id": "t6eexoyEjvAET3Tu",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "IRS & State Notice Triage",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "08cfb260-f026-47e7-99e9-bfb2a439220a",
+      "name": "Notice Received",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        112
+      ],
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 15,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "label:tax-notices has:attachment filename:pdf",
+          "readStatus": "unread"
+        },
+        "options": {
+          "downloadAttachments": true,
+          "dataPropertyAttachmentsPrefixName": "attachment_"
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "id": "64d65c14-5759-4705-a06d-5612a315af99",
+      "name": "Pick Notice PDF",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        112
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Keep the first PDF attachment as \"data\" plus who forwarded it.\nconst entry = Object.entries($binary || {}).find(([, f]) => (f.mimeType || '').includes('pdf') || (f.fileName || '').toLowerCase().endsWith('.pdf'));\nif (!entry) return { json: { skip: true } };\nreturn { json: { messageId: $json.id, forwardedBy: $json.from?.value?.[0]?.address || '', subject: $json.subject || '', fileName: entry[1].fileName, emailText: ($json.text || '').slice(0, 1500) }, binary: { data: entry[1] } };"
+      }
+    },
+    {
+      "id": "2ef30fca-cde6-41a0-9873-11050a7a9292",
+      "name": "Read Notice Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        112
+      ],
+      "parameters": {
+        "operation": "pdf",
+        "options": {
+          "maxPages": 6
+        }
+      }
+    },
+    {
+      "id": "53c3b4e6-e529-4c03-a1f5-f9fe165a801b",
+      "name": "Read Notice with AI",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        672,
+        112
+      ],
+      "parameters": {
+        "promptType": "define",
+        "hasOutputParser": true,
+        "text": "=Forwarding email: {{ $('Pick Notice PDF').item.json.emailText }}\n\nNotice text:\n{{ ($json.text || '').slice(0, 15000) }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "You triage IRS and state tax notices for a CPA firm. Extract facts only from the notice. Dates as YYYY-MM-DD. If the notice gives a response window (e.g. 'within 30 days') and no date, compute it from the notice date. amountDue 0 if none. Use null for anything not stated. confidence = low if the text is unclear or not a tax notice. Never give legal advice beyond a one-line recommended next step for the preparer."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "42e4b18c-21b2-4760-ac1a-f3b86118d34b",
+      "name": "Claude Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        688,
+        336
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-5-5"
+        },
+        "options": {
+          "maxTokensToSample": 700,
+          "temperature": 0
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gateway credits"
+        }
+      }
+    },
+    {
+      "id": "ce401263-31fd-4011-9ed3-ace3f8f91f5d",
+      "name": "Notice Schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        816,
+        336
+      ],
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{ \"agency\": \"IRS\", \"noticeCode\": \"CP2000\", \"taxpayerName\": \"Dana Whitfield\", \"taxYear\": \"2024\", \"amountDue\": 1842.5, \"noticeDate\": \"2026-11-02\", \"responseDeadline\": \"2026-12-02\", \"summary\": \"Proposed adjustment: unreported 1099-B income\", \"recommendedAction\": \"Compare with client brokerage statements; respond with Form 5564 or a disagreement letter\", \"confidence\": \"high\" }"
+      }
+    },
+    {
+      "id": "c2fa09fa-b6e4-47b8-b79b-ade61f377574",
+      "name": "Calculate Deadline",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1024,
+        112
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d1",
+              "name": "notice",
+              "value": "={{ $json.output }}",
+              "type": "object"
+            },
+            {
+              "id": "d2",
+              "name": "deadline",
+              "value": "={{ $json.output.responseDeadline || $now.plus(30, 'days').toFormat('yyyy-MM-dd') }}",
+              "type": "string"
+            },
+            {
+              "id": "d3",
+              "name": "daysLeft",
+              "value": "={{ Math.round(DateTime.fromISO($json.output.responseDeadline || $now.plus(30, 'days').toISODate()).diff($now.startOf('day'), 'days').days) }}",
+              "type": "number"
+            },
+            {
+              "id": "d4",
+              "name": "forwardedBy",
+              "value": "={{ $('Pick Notice PDF').item.json.forwardedBy }}",
+              "type": "string"
+            },
+            {
+              "id": "d5",
+              "name": "fileName",
+              "value": "={{ $('Pick Notice PDF').item.json.fileName }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "5fdb106d-cd3f-4fdf-bdeb-346792eb30fb",
+      "name": "Create Deadline Task",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        112
+      ],
+      "parameters": {
+        "resource": "engagement",
+        "operation": "create",
+        "authentication": "oAuth2",
+        "type": "task",
+        "dueDate": "={{ DateTime.fromISO($('Calculate Deadline').item.json.deadline).minus({ days: 7 }).toFormat('yyyy-MM-dd HH:mm:ss') }}",
+        "metadata": {
+          "subject": "=Respond to {{ $('Calculate Deadline').item.json.notice.agency }} {{ $('Calculate Deadline').item.json.notice.noticeCode || 'notice' }} for {{ $('Calculate Deadline').item.json.notice.taxpayerName || 'client' }} by {{ $('Calculate Deadline').item.json.deadline }}",
+          "body": "={{ $('Calculate Deadline').item.json.notice.summary }}\nTax year {{ $('Calculate Deadline').item.json.notice.taxYear || '?' }}, amount {{ $('Calculate Deadline').item.json.notice.amountDue }}.\nNext step: {{ $('Calculate Deadline').item.json.notice.recommendedAction }}\nFile: {{ $('Calculate Deadline').item.json.fileName }} (forwarded by {{ $('Calculate Deadline').item.json.forwardedBy }})",
+          "status": "NOT_STARTED"
+        },
+        "additionalFields": {}
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "5a61c1b7-d1ae-49d4-8a19-ed4e089b2282",
+      "name": "Due Within 14 Days?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1472,
+        112
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Calculate Deadline').item.json.daysLeft }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              },
+              "rightValue": 14
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "a78579f7-41cc-42ba-8852-bd40a32992e5",
+      "name": "Alert Partner",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1696,
+        16
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "tax-notices"
+        },
+        "messageType": "text",
+        "text": "=:rotating_light: *Urgent {{ $('Calculate Deadline').item.json.notice.agency }} {{ $('Calculate Deadline').item.json.notice.noticeCode || 'notice' }}*: {{ $('Calculate Deadline').item.json.notice.taxpayerName || 'unknown client' }}, due *{{ $('Calculate Deadline').item.json.deadline }}* ({{ $('Calculate Deadline').item.json.daysLeft }} days)\nAmount: ${{ $('Calculate Deadline').item.json.notice.amountDue }}\n{{ $('Calculate Deadline').item.json.notice.summary }}\nNext step: {{ $('Calculate Deadline').item.json.notice.recommendedAction }}\nAI confidence: {{ $('Calculate Deadline').item.json.notice.confidence }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "7f40f827-9a5e-46a7-aa56-d897f7413a88"
+    },
+    {
+      "id": "496ac56b-475d-4c42-898c-2f84306ada7e",
+      "name": "Log Notice",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1920,
+        112
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "receivedAt": "={{ $now.toISO() }}",
+            "taxpayer": "={{ $('Calculate Deadline').item.json.notice.taxpayerName }}",
+            "agency": "={{ $('Calculate Deadline').item.json.notice.agency }}",
+            "noticeCode": "={{ $('Calculate Deadline').item.json.notice.noticeCode }}",
+            "taxYear": "={{ $('Calculate Deadline').item.json.notice.taxYear }}",
+            "amountDue": "={{ $('Calculate Deadline').item.json.notice.amountDue }}",
+            "deadline": "={{ $('Calculate Deadline').item.json.deadline }}",
+            "confidence": "={{ $('Calculate Deadline').item.json.notice.confidence }}",
+            "file": "={{ $('Calculate Deadline').item.json.fileName }}"
+          },
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "a8e62e60-d307-41c4-b233-2a3618ad37c5",
+      "name": "Post to Notices Channel",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1696,
+        208
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "tax-notices"
+        },
+        "messageType": "text",
+        "text": "=:page_facing_up: New {{ $('Calculate Deadline').item.json.notice.agency }} {{ $('Calculate Deadline').item.json.notice.noticeCode || 'notice' }} for {{ $('Calculate Deadline').item.json.notice.taxpayerName || 'unknown client' }}, due {{ $('Calculate Deadline').item.json.deadline }} ({{ $('Calculate Deadline').item.json.daysLeft }} days). Task created in HubSpot.\n{{ $('Calculate Deadline').item.json.notice.summary }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "5b908ce0-9e61-4358-8531-8d4e65bb260e"
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "5a720d95-7c3e-4b4d-a935-b93676db5aef",
+  "nodeGroups": [],
+  "connections": {
+    "Notice Received": {
+      "main": [
+        [
+          {
+            "node": "Pick Notice PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick Notice PDF": {
+      "main": [
+        [
+          {
+            "node": "Read Notice Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Notice Text": {
+      "main": [
+        [
+          {
+            "node": "Read Notice with AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Notice with AI": {
+      "main": [
+        [
+          {
+            "node": "Calculate Deadline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Read Notice with AI",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notice Schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Read Notice with AI",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Deadline": {
+      "main": [
+        [
+          {
+            "node": "Create Deadline Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Deadline Task": {
+      "main": [
+        [
+          {
+            "node": "Due Within 14 Days?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Due Within 14 Days?": {
+      "main": [
+        [
+          {
+            "node": "Alert Partner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Post to Notices Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Partner": {
+      "main": [
+        [
+          {
+            "node": "Log Notice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to Notices Channel": {
+      "main": [
+        [
+          {
+            "node": "Log Notice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

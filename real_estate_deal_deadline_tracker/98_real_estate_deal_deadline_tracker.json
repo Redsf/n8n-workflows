@@ -1,0 +1,303 @@
+{
+  "id": "gbfGt0TL0MwtPa3v",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Real Estate Deal Deadline Tracker",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "5c8737d3-a351-4715-865f-2a1d35e53f5d",
+      "name": "Every Morning 7 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        192
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "e4c9ff8d-e7e2-48ff-b57d-aa468465b707",
+      "name": "Get Active Deals",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        192
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": "active"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "b51e9a1a-5f66-494f-90fa-c518f13ab509",
+      "name": "Find Upcoming Deadlines",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        192
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// One sheet row per deal. A deadline counts as done when its \"<name>Done\" column says yes.\nconst MILESTONES = [\n  ['earnestMoneyDue', 'Earnest money due'], ['inspectionDeadline', 'Inspection contingency ends'],\n  ['appraisalDeadline', 'Appraisal contingency ends'], ['financingDeadline', 'Loan approval deadline'],\n  ['finalWalkthrough', 'Final walk-through'], ['closingDate', 'Closing'],\n];\nconst WARN_DAYS = 3;\nconst today = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');\nconst out = [];\nfor (const { json: d } of $input.all()) {\n  for (const [key, label] of MILESTONES) {\n    if (!d[key] || /^y/i.test(String(d[key + 'Done'] || ''))) continue;\n    const days = Math.round((new Date(d[key] + 'T00:00:00Z') - today) / 86400000);\n    if (days > WARN_DAYS) continue;\n    out.push({ json: { address: d.address, client: d.client, agentName: d.agentName, agentEmail: d.agentEmail, milestone: label, date: d[key], daysLeft: days, overdue: days < 0 } });\n  }\n}\nreturn out.sort((a, b) => a.json.daysLeft - b.json.daysLeft);"
+      }
+    },
+    {
+      "id": "ce26431d-88ec-4d62-b8f6-b1b19a9d3c97",
+      "name": "Overdue?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        96
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.overdue }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "d09ea67e-b67b-4ebf-8336-e1dd723d5e96",
+      "name": "Alert Overdue Deadline",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "transactions"
+        },
+        "messageType": "text",
+        "text": "=:red_circle: *OVERDUE*: {{ $json.milestone }} for *{{ $json.address }}* ({{ $json.client }}) was due {{ $json.date }}, {{ Math.abs($json.daysLeft) }} day(s) ago. Agent: {{ $json.agentName }}. Mark it done in the tracker or extend it in writing today.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "046b0003-0518-424e-93fd-c4f044bc9999"
+    },
+    {
+      "id": "f7bb092e-7b0c-4ecd-afb8-865cfbf0d8b4",
+      "name": "Remind Agent",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        192
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.agentEmail }}",
+        "subject": "={{ $json.daysLeft === 0 ? 'TODAY' : 'In ' + $json.daysLeft + ' day(s)' }}: {{ $json.milestone }} - {{ $json.address }}",
+        "emailType": "text",
+        "message": "=Hi {{ ($json.agentName || '').split(' ')[0] || 'there' }},\n\n{{ $json.milestone }} for {{ $json.address }} ({{ $json.client }}) is on {{ $json.date }}{{ $json.daysLeft === 0 ? ', which is today' : ', ' + $json.daysLeft + ' day(s) from now' }}.\n\nWhen it is handled, mark it done in the deal tracker so the reminders stop.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "4da2d904-3c1c-4c8d-b6de-82baeb74ffa4"
+    },
+    {
+      "id": "8d8f276d-4a81-42b3-8509-96923b131a33",
+      "name": "Build Daily Board",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        384
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const rows = $('Find Upcoming Deadlines').all().map((i) => i.json);\nconst line = (r) => (r.overdue ? ':red_circle: ' : r.daysLeft === 0 ? ':large_orange_circle: ' : ':large_yellow_circle: ') + r.date + '  ' + r.milestone + ' - ' + r.address + ' (' + r.agentName + ')';\nreturn [{ json: { text: '*Deal deadlines, next 3 days* (' + rows.length + ')\\n' + rows.map(line).join('\\n') } }];"
+      }
+    },
+    {
+      "id": "6431bd43-b53f-4c9e-98c7-381f63e44fe9",
+      "name": "Post Daily Board",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        384
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "transactions"
+        },
+        "messageType": "text",
+        "text": "={{ $json.text }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "639562ac-f321-46e4-a1d5-24c216b31df9"
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "d9ac644f-d77b-491a-9158-47249deeff32",
+  "nodeGroups": [],
+  "connections": {
+    "Every Morning 7 AM": {
+      "main": [
+        [
+          {
+            "node": "Get Active Deals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Active Deals": {
+      "main": [
+        [
+          {
+            "node": "Find Upcoming Deadlines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Upcoming Deadlines": {
+      "main": [
+        [
+          {
+            "node": "Overdue?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Daily Board",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Overdue?": {
+      "main": [
+        [
+          {
+            "node": "Alert Overdue Deadline",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Remind Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Daily Board": {
+      "main": [
+        [
+          {
+            "node": "Post Daily Board",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

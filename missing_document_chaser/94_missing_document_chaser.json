@@ -1,0 +1,484 @@
+{
+  "id": "uj4RPwwcj5xQlBrL",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Missing Document Chaser",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "3a6f92af-681b-4463-904f-0b0282d36841",
+      "name": "Weekdays 10 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        96
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "f342b0c3-3d5b-4279-a1f8-961b342565b7",
+      "name": "Chase Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        96
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "firmName",
+              "value": "Your CPA Firm",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "filingDeadline",
+              "value": "2027-04-15",
+              "type": "string"
+            },
+            {
+              "id": "c3",
+              "name": "uploadFormUrl",
+              "value": "https://YOUR-N8N/form/client-documents",
+              "type": "string"
+            },
+            {
+              "id": "c4",
+              "name": "daysBetweenReminders",
+              "value": 3,
+              "type": "number"
+            },
+            {
+              "id": "c5",
+              "name": "remindersBeforeEscalating",
+              "value": 3,
+              "type": "number"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "cd116514-82c2-47be-8335-12cb1694c31b",
+      "name": "Get Clients Waiting",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        96
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": "waiting"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "3fbb92cb-f661-4660-8ebf-5b5d5dfce1cf",
+      "name": "Pick Clients to Chase",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        96
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Uses the onboarding tracker: email, contactName, clientName, missingDocs (\"a; b; c\"), reminderCount, lastReminder, status\nconst s = $('Chase Settings').first().json;\nconst now = new Date();\nconst daysLeft = Math.ceil((new Date(s.filingDeadline + 'T00:00:00Z') - now) / 86400000);\nconst out = [];\nfor (const { json: r } of $input.all()) {\n  const missing = String(r.missingDocs || '').split(';').map((d) => d.trim()).filter(Boolean);\n  if (!missing.length || !r.email) continue;\n  const last = r.lastReminder ? new Date(r.lastReminder) : null;\n  if (last && (now - last) / 86400000 < s.daysBetweenReminders) continue;\n  const count = Number(r.reminderCount || 0);\n  out.push({ json: { row_number: r.row_number, email: r.email, clientName: r.clientName, firstName: String(r.contactName || 'there').split(' ')[0],\n    missing, count, escalate: count >= s.remindersBeforeEscalating, daysLeft,\n    uploadLink: s.uploadFormUrl + '?email=' + encodeURIComponent(r.email) } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "671fc471-73f3-470c-869e-ddbcacd0f504",
+      "name": "Escalate?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        96
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.escalate }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "9eeb7dab-02c1-4618-92ac-9ebd5618e089",
+      "name": "Alert Preparer",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "tax-season"
+        },
+        "messageType": "text",
+        "text": "=:telephone_receiver: *{{ $json.clientName }}* has ignored {{ $json.count }} document reminders. Still missing: {{ $json.missing.join(', ') }}. {{ $json.daysLeft }} days to the filing deadline. Please call them, or plan an extension.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "199e24f4-2601-408d-ac38-45f7622ca359"
+    },
+    {
+      "id": "d4f4e701-f442-4548-883d-5ea2aa778a95",
+      "name": "Mark as Escalated",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1344,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "update",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "row_number"
+          ],
+          "value": {
+            "row_number": "={{ $('Pick Clients to Chase').item.json.row_number }}",
+            "status": "escalated",
+            "lastReminder": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true
+            },
+            {
+              "id": "reminderCount",
+              "displayName": "reminderCount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "lastReminder",
+              "displayName": "lastReminder",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "07060836-df2d-47e7-9f8d-9c5c520323e3",
+      "name": "Send Document Reminder",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        192
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "={{ $json.count === 0 ? 'Documents we still need for your return' : 'Reminder: ' + $json.missing.length + ' document(s) still needed' }}",
+        "emailType": "text",
+        "message": "=Hi {{ $json.firstName }},\n\nTo finish your return before the {{ $('Chase Settings').first().json.filingDeadline }} deadline ({{ $json.daysLeft }} days away), we still need:\n- {{ $json.missing.join('\\n- ') }}\n\nUpload them securely here: {{ $json.uploadLink }}\n\nIf something does not apply to you this year, just reply and tell us.\n\nThanks,\n{{ $('Chase Settings').first().json.firmName }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "f190322a-8fd4-4331-ad8c-3061215ed20f"
+    },
+    {
+      "id": "f4db5b96-e4db-4a12-97b5-9581018e9103",
+      "name": "Record Reminder Sent",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1344,
+        192
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "update",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "row_number"
+          ],
+          "value": {
+            "row_number": "={{ $('Pick Clients to Chase').item.json.row_number }}",
+            "reminderCount": "={{ $('Pick Clients to Chase').item.json.count + 1 }}",
+            "lastReminder": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true
+            },
+            {
+              "id": "reminderCount",
+              "displayName": "reminderCount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "lastReminder",
+              "displayName": "lastReminder",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "35e5dfea-c31c-4997-b303-8788535a8410",
+  "nodeGroups": [],
+  "connections": {
+    "Weekdays 10 AM": {
+      "main": [
+        [
+          {
+            "node": "Chase Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chase Settings": {
+      "main": [
+        [
+          {
+            "node": "Get Clients Waiting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Clients Waiting": {
+      "main": [
+        [
+          {
+            "node": "Pick Clients to Chase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick Clients to Chase": {
+      "main": [
+        [
+          {
+            "node": "Escalate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalate?": {
+      "main": [
+        [
+          {
+            "node": "Alert Preparer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Document Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Preparer": {
+      "main": [
+        [
+          {
+            "node": "Mark as Escalated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Document Reminder": {
+      "main": [
+        [
+          {
+            "node": "Record Reminder Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

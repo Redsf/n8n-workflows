@@ -1,0 +1,540 @@
+{
+  "id": "tTN6IZGyPIdR9vYZ",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Policy Renewal Chaser",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "193114d6-80be-45a9-b420-72b368b3d151",
+      "name": "Every Day 8 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        192
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "2b31ad66-2484-454d-9988-b1917dd730c4",
+      "name": "Renewal Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        192
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r1",
+              "name": "agencyName",
+              "value": "Your Insurance Agency",
+              "type": "string"
+            },
+            {
+              "id": "r2",
+              "name": "agencyPhone",
+              "value": "(555) 555-0100",
+              "type": "string"
+            },
+            {
+              "id": "r3",
+              "name": "bookingUrl",
+              "value": "https://calendly.com/your-agency/policy-review",
+              "type": "string"
+            },
+            {
+              "id": "r4",
+              "name": "smsFromNumber",
+              "value": "+15555550100",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "aa6e7eb9-4f5f-4f7f-923b-0665b605e5ea",
+      "name": "Get Policies",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        192
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "b55247fe-8489-4542-8a6b-36d2904dea9a",
+      "name": "Find Due Renewals",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        192
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Sheet columns: policyNumber, clientName, email, phone, policyType, carrier, premium, renewalDate (YYYY-MM-DD), agent, status, lastNotice\nconst today = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');\nconst out = [];\nfor (const { json: p } of $input.all()) {\n  if (!p.renewalDate || String(p.status || '').toLowerCase() === 'renewed') continue;\n  const days = Math.round((new Date(p.renewalDate + 'T00:00:00Z') - today) / 86400000);\n  const stage = days === 60 ? '60' : days === 30 ? '30' : days === 7 ? '7' : null;\n  if (!stage || p.lastNotice === stage) continue;\n  out.push({ json: { ...p, daysToRenewal: days, stage, firstName: String(p.clientName || 'there').split(' ')[0] } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "c737a43d-057d-4112-8a37-98e1f329b504",
+      "name": "Route by Days Left",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        896,
+        176
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "60 days",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "60"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "30 days",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "30"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "outputKey": "7 days",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "7"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b4e3955b-ec6b-44f0-ad23-7f9c6c642263",
+      "name": "Send 60-Day Notice",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Your {{ $json.policyType }} policy renews on {{ $json.renewalDate }}",
+        "emailType": "text",
+        "message": "=Hi {{ $json.firstName }},\n\nYour {{ $json.policyType }} policy with {{ $json.carrier }} (#{{ $json.policyNumber }}) renews on {{ $json.renewalDate }}. This is a good time to tell us about any changes (new drivers, property updates, business changes) so we can shop your coverage if needed.\n\nBook a quick review: {{ $('Renewal Settings').first().json.bookingUrl }}\nOr call us at {{ $('Renewal Settings').first().json.agencyPhone }}.\n\n{{ $('Renewal Settings').first().json.agencyName }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "af6e067c-fdfc-40de-a1cb-73cabcd74c6b"
+    },
+    {
+      "id": "17a85d49-5296-42be-bcb1-d5dedaa20c5c",
+      "name": "Record Notice Sent",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1568,
+        192
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "update",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "row_number"
+          ],
+          "value": {
+            "row_number": "={{ $('Find Due Renewals').item.json.row_number }}",
+            "lastNotice": "={{ $('Find Due Renewals').item.json.stage }}"
+          },
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true
+            },
+            {
+              "id": "lastNotice",
+              "displayName": "lastNotice",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "b082ed97-1241-4366-aeac-09312f7afd7a",
+      "name": "Send 30-Day Reminder",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        192
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "=30 days until your {{ $json.policyType }} renewal",
+        "emailType": "text",
+        "message": "=Hi {{ $json.firstName }},\n\nYour {{ $json.policyType }} policy (#{{ $json.policyNumber }}) renews in 30 days, on {{ $json.renewalDate }}. Reply to this email or book a call so we can confirm your coverage and avoid any gap: {{ $('Renewal Settings').first().json.bookingUrl }}\n\n{{ $('Renewal Settings').first().json.agencyName }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "a8b72afd-d59b-4958-8c0d-2a17a0859a61"
+    },
+    {
+      "id": "df242181-ee1b-4eab-b297-041e9af09719",
+      "name": "Create Agent Task",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        192
+      ],
+      "parameters": {
+        "resource": "engagement",
+        "operation": "create",
+        "authentication": "oAuth2",
+        "type": "task",
+        "dueDate": "={{ $now.plus(3, 'days').toFormat('yyyy-MM-dd HH:mm:ss') }}",
+        "metadata": {
+          "subject": "=Renewal review: {{ $('Find Due Renewals').item.json.clientName }} {{ $('Find Due Renewals').item.json.policyType }} #{{ $('Find Due Renewals').item.json.policyNumber }} renews {{ $('Find Due Renewals').item.json.renewalDate }}",
+          "body": "=Carrier {{ $('Find Due Renewals').item.json.carrier }}, premium ${{ $('Find Due Renewals').item.json.premium }}. Confirm coverage, re-quote if premium rose.",
+          "status": "NOT_STARTED"
+        },
+        "additionalFields": {}
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "80e9b89d-4de4-4a36-a6fb-e7c7bb2285ac",
+      "name": "Text 7-Day Reminder",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        384
+      ],
+      "parameters": {
+        "resource": "sms",
+        "operation": "send",
+        "from": "={{ $('Renewal Settings').first().json.smsFromNumber }}",
+        "to": "={{ $json.phone }}",
+        "message": "=Hi {{ $json.firstName }}, your {{ $json.policyType }} policy renews in 7 days ({{ $json.renewalDate }}). Questions? Call {{ $('Renewal Settings').first().json.agencyPhone }}. - {{ $('Renewal Settings').first().json.agencyName }}. Reply STOP to opt out.",
+        "toWhatsapp": false,
+        "options": {}
+      },
+      "credentials": {
+        "twilioApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twilio"
+        }
+      }
+    },
+    {
+      "id": "2e03a717-5106-4a46-bd88-b0e4716f25ad",
+      "name": "Alert Agent",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1344,
+        384
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "renewals"
+        },
+        "messageType": "text",
+        "text": "=:hourglass: *7 days to renewal*: {{ $('Find Due Renewals').item.json.clientName }}, {{ $('Find Due Renewals').item.json.policyType }} #{{ $('Find Due Renewals').item.json.policyNumber }} ({{ $('Find Due Renewals').item.json.carrier }}, ${{ $('Find Due Renewals').item.json.premium }}) renews {{ $('Find Due Renewals').item.json.renewalDate }}. Agent: {{ $('Find Due Renewals').item.json.agent || 'unassigned' }}. Not marked renewed yet.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "6f6528e5-60b2-4e1c-94cf-207babb3a425"
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "cb2433f1-bfbf-49f0-843d-63273295f80c",
+  "nodeGroups": [],
+  "connections": {
+    "Every Day 8 AM": {
+      "main": [
+        [
+          {
+            "node": "Renewal Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Renewal Settings": {
+      "main": [
+        [
+          {
+            "node": "Get Policies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Policies": {
+      "main": [
+        [
+          {
+            "node": "Find Due Renewals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Due Renewals": {
+      "main": [
+        [
+          {
+            "node": "Route by Days Left",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Days Left": {
+      "main": [
+        [
+          {
+            "node": "Send 60-Day Notice",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send 30-Day Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Text 7-Day Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send 60-Day Notice": {
+      "main": [
+        [
+          {
+            "node": "Record Notice Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send 30-Day Reminder": {
+      "main": [
+        [
+          {
+            "node": "Create Agent Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Agent Task": {
+      "main": [
+        [
+          {
+            "node": "Record Notice Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text 7-Day Reminder": {
+      "main": [
+        [
+          {
+            "node": "Alert Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Agent": {
+      "main": [
+        [
+          {
+            "node": "Record Notice Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

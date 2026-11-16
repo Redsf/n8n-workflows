@@ -1,0 +1,508 @@
+{
+  "id": "Ps21fT6ukIrgPkhj",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Client Onboarding Kickoff",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "e4608ace-81e6-4425-accb-ff8a44f16a28",
+      "name": "Client Signed",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        96
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "client-signed",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "webhookId": "c8b2ac84-119e-4a13-9b4f-47faeac10afc"
+    },
+    {
+      "id": "a0a53531-b363-44cb-811f-397fb494d498",
+      "name": "Onboarding Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        96
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "o1",
+              "name": "businessName",
+              "value": "Your Company",
+              "type": "string"
+            },
+            {
+              "id": "o2",
+              "name": "clientsFolderId",
+              "value": "PLACEHOLDER_CLIENTS_FOLDER_ID",
+              "type": "string"
+            },
+            {
+              "id": "o3",
+              "name": "uploadFormUrl",
+              "value": "https://YOUR-N8N/form/client-documents",
+              "type": "string"
+            },
+            {
+              "id": "o4",
+              "name": "kickoffBookingUrl",
+              "value": "https://calendly.com/your-team/kickoff",
+              "type": "string"
+            },
+            {
+              "id": "o5",
+              "name": "senderName",
+              "value": "Client Success, Your Company",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ac3d1565-f316-4194-9235-a265c222ea91",
+      "name": "Normalize Client",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        96
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "n1",
+              "name": "clientName",
+              "value": "={{ ($json.body.clientName || $json.body.company || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "n2",
+              "name": "contactName",
+              "value": "={{ ($json.body.contactName || $json.body.name || 'there').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "n3",
+              "name": "email",
+              "value": "={{ ($json.body.email || '').trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "n4",
+              "name": "service",
+              "value": "={{ ($json.body.service || 'bookkeeping').toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "n5",
+              "name": "accountManager",
+              "value": "={{ $json.body.accountManager || 'unassigned' }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "2eab3ddb-6b30-46db-907f-019bf9e364dc",
+      "name": "Valid Client?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        96
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test($json.email) }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            },
+            {
+              "leftValue": "={{ $json.clientName }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "f1716b2b-a771-4e23-9ed4-f60e8602e3b0",
+      "name": "Confirm Signing",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": true }",
+        "options": {
+          "responseCode": 200
+        }
+      }
+    },
+    {
+      "id": "9a5ced1d-64f0-4f00-a5f2-32c559013a4c",
+      "name": "Create Client Folder",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "resource": "folder",
+        "operation": "create",
+        "authentication": "oAuth2",
+        "name": "={{ $('Normalize Client').item.json.clientName }} - Onboarding",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Normalize Client').item.json.clientsFolderId }}"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Drive"
+        }
+      }
+    },
+    {
+      "id": "e60d12aa-f02f-4c4f-8310-4194207374d9",
+      "name": "Build Checklist",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "// Documents to collect per service. Edit to match your firm.\nconst lists = {\n  bookkeeping: ['Last 3 months of bank statements', 'Credit card statements', 'Prior year tax return', 'Chart of accounts or last balance sheet'],\n  tax: ['Prior year tax return', 'W-2 and 1099 forms', 'Mortgage interest statement (1098)', 'Photo ID'],\n  payroll: ['Employee list with pay rates', 'Signed W-4 forms', 'Last payroll register', 'State tax account numbers'],\n};\nconst client = $('Normalize Client').item.json;\nconst docs = lists[client.service] || lists.bookkeeping;\nreturn { json: { ...client, folderId: $json.id, missingDocs: docs.join('; '), docCount: docs.length,\n  uploadLink: client.uploadFormUrl + '?email=' + encodeURIComponent(client.email) } };"
+      }
+    },
+    {
+      "id": "641f34e0-68b8-4432-868d-93affbe7b560",
+      "name": "Add to Onboarding Tracker",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1568,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "signedAt": "={{ $now.toISO() }}",
+            "clientName": "={{ $('Build Checklist').item.json.clientName }}",
+            "contactName": "={{ $('Build Checklist').item.json.contactName }}",
+            "email": "={{ $('Build Checklist').item.json.email }}",
+            "service": "={{ $('Build Checklist').item.json.service }}",
+            "folderId": "={{ $('Build Checklist').item.json.folderId }}",
+            "missingDocs": "={{ $('Build Checklist').item.json.missingDocs }}",
+            "status": "waiting",
+            "reminderCount": "0",
+            "lastReminder": ""
+          },
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "858a4cc8-30bc-4acb-b234-e3bbbbb51edb",
+      "name": "Send Welcome Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1792,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Build Checklist').item.json.email }}",
+        "subject": "=Welcome to {{ $('Build Checklist').item.json.businessName }}! Two quick steps",
+        "emailType": "html",
+        "message": "=<p>Hi {{ $('Build Checklist').item.json.contactName.split(' ')[0] }},</p><p>Welcome aboard, we are excited to start your {{ $('Build Checklist').item.json.service }} work.</p><p><b>1. Upload these documents</b> (<a href=\"{{ $('Build Checklist').item.json.uploadLink }}\">secure upload page</a>):</p><ul>{{ $('Build Checklist').item.json.missingDocs.split('; ').map(d => '<li>' + d + '</li>').join('') }}</ul><p><b>2. Book your kickoff call:</b> <a href=\"{{ $('Build Checklist').item.json.kickoffBookingUrl }}\">pick a time</a></p><p>{{ $('Build Checklist').item.json.senderName }}</p>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "6fa50950-35a1-4b66-a3a0-3dd7015fb1ee"
+    },
+    {
+      "id": "a5096771-9f7e-40b1-aa8e-e01b45619723",
+      "name": "Mark as Customer in HubSpot",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        2016,
+        0
+      ],
+      "parameters": {
+        "resource": "contact",
+        "operation": "upsert",
+        "authentication": "oAuth2",
+        "email": "={{ $('Build Checklist').item.json.email }}",
+        "additionalFields": {
+          "companyName": "={{ $('Build Checklist').item.json.clientName }}",
+          "lifeCycleStage": "customer"
+        }
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "44ca4ead-b27d-479e-8a48-076c8fd80c5a",
+      "name": "Brief the Team",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        2240,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "onboarding"
+        },
+        "messageType": "text",
+        "text": "=:tada: *New client signed: {{ $('Build Checklist').item.json.clientName }}* ({{ $('Build Checklist').item.json.service }})\nContact: {{ $('Build Checklist').item.json.contactName }}, {{ $('Build Checklist').item.json.email }}\nAccount manager: {{ $('Build Checklist').item.json.accountManager }}\nWelcome email sent; waiting on {{ $('Build Checklist').item.json.docCount }} documents.\nFolder: https://drive.google.com/drive/folders/{{ $('Build Checklist').item.json.folderId }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "76b20365-b316-4548-869e-edf6243d3aee"
+    },
+    {
+      "id": "15b91d90-0670-4268-9208-490194a3d02c",
+      "name": "Reject Bad Data",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        896,
+        192
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"ok\": false, \"error\": \"clientName and a valid email are required\" }",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "4cf0f2a9-cc7e-4568-bd7a-e492ed1833ad",
+  "nodeGroups": [],
+  "connections": {
+    "Client Signed": {
+      "main": [
+        [
+          {
+            "node": "Onboarding Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Onboarding Settings": {
+      "main": [
+        [
+          {
+            "node": "Normalize Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Client": {
+      "main": [
+        [
+          {
+            "node": "Valid Client?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid Client?": {
+      "main": [
+        [
+          {
+            "node": "Confirm Signing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject Bad Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm Signing": {
+      "main": [
+        [
+          {
+            "node": "Create Client Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Client Folder": {
+      "main": [
+        [
+          {
+            "node": "Build Checklist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Checklist": {
+      "main": [
+        [
+          {
+            "node": "Add to Onboarding Tracker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to Onboarding Tracker": {
+      "main": [
+        [
+          {
+            "node": "Send Welcome Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Welcome Email": {
+      "main": [
+        [
+          {
+            "node": "Mark as Customer in HubSpot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark as Customer in HubSpot": {
+      "main": [
+        [
+          {
+            "node": "Brief the Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

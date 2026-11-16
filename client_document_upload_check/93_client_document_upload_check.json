@@ -1,0 +1,667 @@
+{
+  "id": "jhmVY24huqpoyJlb",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Client Document Upload Check",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "d1be3108-58bc-4f89-ad21-15f1d2987e5b",
+      "name": "Client Uploads Documents",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        0,
+        208
+      ],
+      "parameters": {
+        "formTitle": "Upload your onboarding documents",
+        "formDescription": "Use the email address we have on file. PDFs work best.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Your email",
+              "fieldName": "email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Documents",
+              "fieldName": "documents",
+              "fieldType": "file",
+              "multipleFiles": true,
+              "acceptFileTypes": ".pdf,.jpg,.jpeg,.png",
+              "requiredField": true
+            }
+          ]
+        },
+        "responseMode": "onReceived",
+        "options": {
+          "path": "client-documents",
+          "appendAttribution": false,
+          "respondWithOptions": {
+            "values": {
+              "respondWith": "text",
+              "formSubmittedText": "Thank you! We received your files and will email you what is still needed."
+            }
+          }
+        }
+      },
+      "webhookId": "ce9a6ee4-a7bc-4d6c-bb05-a397c6d6ddf6"
+    },
+    {
+      "id": "faebfe92-6f10-4c41-865d-59f2800d53bb",
+      "name": "Find Client in Tracker",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        208
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email",
+              "lookupValue": "={{ $json.email.trim().toLowerCase() }}"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "04dc0abc-f827-48d7-aeb1-61c2cdb85e99",
+      "name": "Known Client?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        208
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.row_number }}",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "ff91fd2c-5f08-40f9-86ee-50b553e190a2",
+      "name": "Split Uploaded Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        112
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// One item per uploaded file, keeping the binary under \"data\".\nconst upload = $('Client Uploads Documents').first();\nreturn Object.entries(upload.binary || {}).map(([key, file]) => ({\n  json: { fileName: file.fileName, mimeType: file.mimeType },\n  binary: { data: file },\n}));"
+      }
+    },
+    {
+      "id": "045f6981-f621-44fc-a542-d565d1fc0f6a",
+      "name": "Save to Client Folder",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        896,
+        112
+      ],
+      "parameters": {
+        "resource": "file",
+        "operation": "upload",
+        "authentication": "oAuth2",
+        "inputDataFieldName": "data",
+        "name": "={{ $json.fileName }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Find Client in Tracker').first().json.folderId }}"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Drive"
+        }
+      }
+    },
+    {
+      "id": "e17cdf33-6622-461f-918e-9708e8d8a7e8",
+      "name": "Read PDF Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        112
+      ],
+      "parameters": {
+        "operation": "pdf",
+        "options": {
+          "maxPages": 3
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "5e8e5e23-4210-4427-8fa9-3fbdb7c091e5",
+      "name": "Check Document",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1344,
+        112
+      ],
+      "parameters": {
+        "promptType": "define",
+        "hasOutputParser": true,
+        "text": "=Checklist still needed: {{ $('Find Client in Tracker').first().json.missingDocs }}\nFile name: {{ $('Split Uploaded Files').item.json.fileName }}\nFirst pages of text:\n{{ ($json.text || '(no text could be read; it may be a photo or scan)').slice(0, 6000) }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "You check client onboarding documents. Pick the ONE checklist item this file satisfies, copied exactly from the checklist, or \"\" if none. readable=false if the text is empty, cut off or clearly the wrong period. issue = one short sentence for the client when something is wrong, else \"\"."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "1e13a6ae-6913-4040-bba6-09806291572a",
+      "name": "Claude Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        1360,
+        336
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-haiku-5-5"
+        },
+        "options": {
+          "maxTokensToSample": 300,
+          "temperature": 0
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gateway credits"
+        }
+      }
+    },
+    {
+      "id": "3b0f5c28-9963-4731-86af-77105291a4d1",
+      "name": "Document Check Schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1488,
+        336
+      ],
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{ \"matchedItem\": \"Prior year tax return\", \"readable\": true, \"issue\": \"\" }"
+      }
+    },
+    {
+      "id": "17bc7dfc-8765-4a7e-bd80-ce36c1c0c0cd",
+      "name": "Update Checklist",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        112
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const row = $('Find Client in Tracker').first().json;\nlet missing = String(row.missingDocs || '').split(';').map((s) => s.trim()).filter(Boolean);\nconst received = [], issues = [];\n$input.all().forEach((item, i) => {\n  const r = item.json.output || {};\n  const file = $('Split Uploaded Files').all()[i]?.json.fileName || 'file';\n  if (r.matchedItem && r.readable !== false) { received.push(r.matchedItem); missing = missing.filter((d) => d !== r.matchedItem); }\n  else issues.push(file + ': ' + (r.issue || 'we could not match this file to the checklist'));\n});\nreturn [{ json: { row_number: row.row_number, clientName: row.clientName, contactName: row.contactName, email: row.email,\n  missingDocs: missing.join('; '), received, issues, allIn: missing.length === 0 } }];"
+      }
+    },
+    {
+      "id": "b158fea0-178e-4e50-8c99-d93b612eca8f",
+      "name": "Save Progress",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1920,
+        112
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "update",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "row_number"
+          ],
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "missingDocs": "={{ $json.missingDocs }}",
+            "status": "={{ $json.allIn ? 'complete' : 'waiting' }}"
+          },
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true
+            },
+            {
+              "id": "missingDocs",
+              "displayName": "missingDocs",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "99781982-f603-460c-992c-e76a6ab7f382",
+      "name": "All Documents In?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2144,
+        112
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Update Checklist').item.json.allIn }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "c6853540-d050-42c6-b704-0c6e53675d09",
+      "name": "Email: All Received",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2368,
+        16
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Update Checklist').item.json.email }}",
+        "subject": "We have everything we need",
+        "emailType": "text",
+        "message": "=Hi {{ $('Update Checklist').item.json.contactName.split(' ')[0] }},\n\nThanks, we now have every document on your onboarding list. Your team will be in touch about next steps.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "784fa0bb-9cc3-43cb-a0c1-efe78bd303b7"
+    },
+    {
+      "id": "ea7e6c0c-09bb-47f7-8333-107e36e3bd98",
+      "name": "Ready for Kickoff",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        2592,
+        16
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "onboarding"
+        },
+        "messageType": "text",
+        "text": "=:white_check_mark: *{{ $('Update Checklist').item.json.clientName }}* has uploaded every onboarding document. Ready for kickoff.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "f040280a-6e19-4ee9-ac76-53615edf6f7c"
+    },
+    {
+      "id": "1486df3c-c226-4bdc-be14-a0d8719ffff8",
+      "name": "Email: Still Needed",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2368,
+        208
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Update Checklist').item.json.email }}",
+        "subject": "Thanks! A few documents still to go",
+        "emailType": "text",
+        "message": "=Hi {{ $('Update Checklist').item.json.contactName.split(' ')[0] }},\n\nThanks for the upload. Received: {{ $('Update Checklist').item.json.received.join(', ') || 'nothing we could match yet' }}.\n\nStill needed:\n- {{ $('Update Checklist').item.json.missingDocs.split('; ').join('\\n- ') }}\n{{ $('Update Checklist').item.json.issues.length ? '\\nPlease check: ' + $('Update Checklist').item.json.issues.join('; ') : '' }}\n\nYou can upload more using the same link.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "527a150f-b4b2-46d1-abb0-431e4ed5d760"
+    },
+    {
+      "id": "5776ffc0-1a16-4f24-9d08-b24382c726c7",
+      "name": "Flag Unknown Uploader",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        304
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "onboarding"
+        },
+        "messageType": "text",
+        "text": "=:grey_question: Documents uploaded by *{{ $('Client Uploads Documents').first().json.email }}*, which is not in the onboarding tracker. Check the address and file them by hand.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "f7fbd726-1c82-45e6-82f5-4a689caba5c1"
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "0f11e567-5b00-4a8e-bc5f-5dc074a8051c",
+  "nodeGroups": [],
+  "connections": {
+    "Client Uploads Documents": {
+      "main": [
+        [
+          {
+            "node": "Find Client in Tracker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Client in Tracker": {
+      "main": [
+        [
+          {
+            "node": "Known Client?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Known Client?": {
+      "main": [
+        [
+          {
+            "node": "Split Uploaded Files",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Flag Unknown Uploader",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Uploaded Files": {
+      "main": [
+        [
+          {
+            "node": "Save to Client Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Client Folder": {
+      "main": [
+        [
+          {
+            "node": "Read PDF Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read PDF Text": {
+      "main": [
+        [
+          {
+            "node": "Check Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Document": {
+      "main": [
+        [
+          {
+            "node": "Update Checklist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Check Document",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Document Check Schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Check Document",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Checklist": {
+      "main": [
+        [
+          {
+            "node": "Save Progress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Progress": {
+      "main": [
+        [
+          {
+            "node": "All Documents In?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "All Documents In?": {
+      "main": [
+        [
+          {
+            "node": "Email: All Received",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email: Still Needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email: All Received": {
+      "main": [
+        [
+          {
+            "node": "Ready for Kickoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

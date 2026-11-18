@@ -1,0 +1,410 @@
+{
+  "id": "3s9yZYA9IP4Bk6AK",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Subcontractor Insurance Expiry Tracker",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "bf5703bc-b616-4ab9-9228-b54f1f5f0a51",
+      "name": "Daily 8 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        96
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ede6c860-0d14-4f31-b26e-ea7612dc7156",
+      "name": "Tracker Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        96
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "companyName",
+              "value": "Your Construction Co",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "senderName",
+              "value": "Office Manager, Your Construction Co",
+              "type": "string"
+            },
+            {
+              "id": "s3",
+              "name": "certificateEmail",
+              "value": "certificates@yourcompany.com",
+              "type": "string"
+            },
+            {
+              "id": "s4",
+              "name": "today",
+              "value": "={{ $now.toFormat('yyyy-MM-dd') }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "e3234d0b-d5c0-444e-b05c-9f4aa555050e",
+      "name": "Read Vendor Certificates",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        96
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "7cef6af6-d088-4ed8-af07-2313a44d6ecc",
+      "name": "Check Expiry Dates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        96
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Ask vendors for a new certificate 30, 14 and 7 days before expiry; flag anything that has expired (once).\nconst today = new Date($('Tracker Settings').first().json.today + 'T00:00:00Z');\nconst out = [];\nfor (const item of $input.all()) {\n  const v = item.json;\n  if (!v.vendorName || !v.expiryDate) continue;\n  const daysLeft = Math.round((new Date(String(v.expiryDate).slice(0, 10) + 'T00:00:00Z') - today) / 86400000);\n  let action = null;\n  if ([30, 14, 7].includes(daysLeft) && v.email) action = 'request';\n  else if (daysLeft <= 0 && v.status !== 'expired') action = 'expired';\n  if (!action) continue;\n  out.push({ json: { row_number: v.row_number, vendorName: v.vendorName, contact: (v.contactName || 'there').split(' ')[0], email: v.email || '',\n    policyType: v.policyType || 'general liability', expiryDate: String(v.expiryDate).slice(0, 10), daysLeft, action,\n    status: action === 'expired' ? 'expired' : 'renewal requested' } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "dbead1ec-8f0b-4903-b338-44e080606f18",
+      "name": "Route by Status",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        896,
+        96
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "renameOutput": true,
+              "outputKey": "request",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "request"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "renameOutput": true,
+              "outputKey": "expired",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "expired"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "ae7c3fa9-baeb-452d-8e2c-b76b0e448731",
+      "name": "Request New Certificate",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Updated insurance certificate needed: {{ $json.vendorName }}",
+        "emailType": "text",
+        "message": "=Hi {{ $json.contact }},\n\nOur records show the {{ $json.policyType }} certificate for {{ $json.vendorName }} expires on {{ $json.expiryDate }} ({{ $json.daysLeft }} days). Please send the renewed certificate, naming {{ $('Tracker Settings').first().json.companyName }} as certificate holder, to {{ $('Tracker Settings').first().json.certificateEmail }}.\n\nWithout a current certificate we can't schedule you on our sites.\n\nThanks,\n{{ $('Tracker Settings').first().json.senderName }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "e489a57f-2d9e-4959-ac09-97bf75068644"
+    },
+    {
+      "id": "d4f9d969-accb-420f-8ef7-03abaf8b319d",
+      "name": "Flag Expired Vendor",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        192
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "site-ops"
+        },
+        "messageType": "text",
+        "text": "=:no_entry: *Do not schedule {{ $json.vendorName }}.* Their {{ $json.policyType }} certificate expired on {{ $json.expiryDate }}. Update the tracker once a new certificate arrives.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "c7890960-45d0-4580-8de3-b8b539b07467"
+    },
+    {
+      "id": "203f219b-89b9-4760-a65f-928545c4f02e",
+      "name": "Update Vendor Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1344,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "update",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "row_number"
+          ],
+          "value": {
+            "row_number": "={{ $('Check Expiry Dates').item.json.row_number }}",
+            "status": "={{ $('Check Expiry Dates').item.json.status }}",
+            "lastNotice": "={{ $now.toFormat('yyyy-MM-dd') }}"
+          },
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "lastNotice",
+              "displayName": "lastNotice",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "2b4cf7dc-06d7-475b-8d8d-4269ac679e46",
+  "nodeGroups": [],
+  "connections": {
+    "Daily 8 AM": {
+      "main": [
+        [
+          {
+            "node": "Tracker Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tracker Settings": {
+      "main": [
+        [
+          {
+            "node": "Read Vendor Certificates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Vendor Certificates": {
+      "main": [
+        [
+          {
+            "node": "Check Expiry Dates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Expiry Dates": {
+      "main": [
+        [
+          {
+            "node": "Route by Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Status": {
+      "main": [
+        [
+          {
+            "node": "Request New Certificate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Flag Expired Vendor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request New Certificate": {
+      "main": [
+        [
+          {
+            "node": "Update Vendor Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flag Expired Vendor": {
+      "main": [
+        [
+          {
+            "node": "Update Vendor Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

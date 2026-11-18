@@ -2,7 +2,7 @@
 
 [![validate](https://github.com/Redsf/n8n-workflows/actions/workflows/validate.yml/badge.svg)](https://github.com/Redsf/n8n-workflows/actions/workflows/validate.yml)
 
-A collection of 81 production-style n8n automations covering AI agents, RAG knowledge systems, e-commerce operations, real estate, and HR document processing. Each workflow lives in its own folder as a ready-to-import JSON file with a README explaining what it does, how it's wired, and how to configure it.
+A collection of 91 production-style n8n automations covering AI agents, RAG knowledge systems, e-commerce operations, real estate, and HR document processing. Each workflow lives in its own folder as a ready-to-import JSON file with a README explaining what it does, how it's wired, and how to configure it.
 
 These solve real operational problems: recovering abandoned carts, qualifying and routing leads, extracting data from invoices, answering questions with grounded AI, and keeping teams informed without manual busywork.
 
@@ -43,7 +43,7 @@ Credentials are referenced by name only. No API keys, tokens, or secrets are sto
 ## Quality checks
 
 Every push runs [`scripts/validate_workflows.py`](scripts/validate_workflows.py)
-across all 81 workflows, plus a gitleaks scan of the working tree.
+across all 91 workflows, plus a gitleaks scan of the working tree.
 
 **Blocking (fails the build):**
 
@@ -58,9 +58,10 @@ across all 81 workflows, plus a gitleaks scan of the working tree.
 - Disabled nodes left on the canvas
 
 The advisory checks are deliberately not blocking, because they describe
-reliability posture rather than correctness. Worth knowing: **22 of 81
-workflows currently have an active Error Trigger.** The rest will fail silently
-if you activate them as-is. The validator tells you which ones on every run.
+reliability posture rather than correctness. Worth knowing: **14 of 91
+workflows currently have an active Error Trigger.** Workflows #60-91 instead send
+failures to the shared [Workflow Error Handler](workflow_error_handler) through
+their error workflow setting. The rest will fail silently if you activate them as-is. The validator tells you which ones on every run.
 
 Run it locally before opening a PR:
 
@@ -196,6 +197,23 @@ Money, onboarding, reviews and industry workflows for the same kind of firms: ac
 | 79 | [Estimate Request to AI Quote](estimate_request_ai_quote) | Claude prices estimate requests from your price book into a Google Docs quote, owner approves in Slack, PDF is emailed and a deal is created. |
 | 80 | [Real Estate Deal Deadline Tracker](real_estate_deal_deadline_tracker) | Daily scan of contract deadlines (inspection, appraisal, financing, closing) with agent reminders, overdue alerts and a team board. |
 | 81 | [Weekly Owner KPI Report](weekly_owner_kpi_report) | Monday report of invoiced, collected, overdue, new leads and deals won from QuickBooks and HubSpot, with a short Claude-written note. |
+
+### Revenue Recovery & Admin
+
+Money left on the table and the admin around it: quotes, no-shows, failed payments, contracts, rent, approvals, compliance and repeat customers. Errors go to the shared [Workflow Error Handler](workflow_error_handler).
+
+| # | Workflow | Summary |
+|---|----------|---------|
+| 82 | [Quote Follow-up Chaser](quote_follow_up_chaser) | Follows up unanswered quotes on day 2 by email, day 5 by text and day 10 with a final email and a HubSpot call task. |
+| 83 | [No-Show Rebooking](no_show_rebooking) | Turns a no-show into a rebooking: finds three open calendar slots, lets the client pick one from an email form and books it. |
+| 84 | [Failed Payment Recovery](failed_payment_recovery) | Recovers failed Stripe payments with an update-card email and text, a second reminder after 3 days and an owner alert after 7. |
+| 85 | [Contract Signature Chaser](contract_signature_chaser) | Reminds clients to sign contracts on days 2, 4 and 7, then creates a HubSpot call task and alerts the owner on day 9. |
+| 86 | [Subcontractor Insurance Expiry Tracker](subcontractor_insurance_tracker) | Asks vendors for renewed insurance certificates 30, 14 and 7 days before expiry and flags expired ones as do-not-schedule. |
+| 87 | [Client Birthday & Home Anniversary Messages](client_milestone_messages) | Sends Claude-written birthday and home anniversary notes to past clients by email and text. |
+| 88 | [Rent Reminder & Late Notice](rent_reminder_late_notice) | Rent reminders 3 days before the due date, late notices with the fee the day after, and a manager alert on day 5. |
+| 89 | [Purchase & Expense Approval in Slack](purchase_approval_slack) | Purchase request form with auto-approval under a limit, Slack Approve/Reject buttons above it, and a spend log. |
+| 90 | [Webinar Registration & No-Show Replay](webinar_registration_followup) | Webinar sign-up with calendar invite and reminders, then a replay plus offer for attendees and a replay for no-shows. |
+| 91 | [Churn-Risk Win-back](churn_risk_winback) | Weekly Claude-written win-back emails with an offer code for customers who have not ordered in 60 days. |
 
 ## Stack
 

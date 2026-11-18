@@ -1,0 +1,519 @@
+{
+  "id": "N5kBIdRtyHT3NUUN",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Quote Follow-up Chaser",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "c85dd4d0-2cf0-4536-a0f9-af49bf1f351a",
+      "name": "Weekdays 10 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        192
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "5d1e906e-63e8-4fb7-9858-1dae3048aac4",
+      "name": "Follow-up Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        192
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "businessName",
+              "value": "Your Company",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "senderName",
+              "value": "Sam, Your Company",
+              "type": "string"
+            },
+            {
+              "id": "s3",
+              "name": "smsFromNumber",
+              "value": "+15550000000",
+              "type": "string"
+            },
+            {
+              "id": "s4",
+              "name": "today",
+              "value": "={{ $now.toFormat('yyyy-MM-dd') }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "05c592b3-8c3f-48a6-96d5-11a89506354b",
+      "name": "Read Open Quotes",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        192
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": "sent"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "12139149-5b37-40f7-99f3-90ed05207be7",
+      "name": "Pick Quotes to Chase",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        192
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Follow up 2, 5 and 10 days after a quote was sent. Rows marked accepted, declined or replied are not read.\nconst today = new Date($('Follow-up Settings').first().json.today + 'T00:00:00Z');\nconst out = [];\nfor (const item of $input.all()) {\n  const q = item.json;\n  if (!q.email || !q.sentDate) continue;\n  const days = Math.round((today - new Date(String(q.sentDate).slice(0, 10) + 'T00:00:00Z')) / 86400000);\n  const step = { 2: 'checkIn', 5: 'nudge', 10: 'final' }[days];\n  if (!step || String(q.lastFollowUp || '').includes(step)) continue;\n  out.push({ json: { row_number: q.row_number, firstName: (q.name || 'there').split(' ')[0], name: q.name, email: q.email, phone: q.phone || '',\n    quoteNumber: q.quoteNumber, amount: q.amount, quoteLink: q.quoteLink || '', owner: q.owner || '', daysSinceSent: days, step,\n    followUps: [q.lastFollowUp, step].filter(Boolean).join(', ') } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "d217297e-fd7e-4599-ad5b-0ae5a5be1109",
+      "name": "Route by Day",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        896,
+        192
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "renameOutput": true,
+              "outputKey": "checkIn",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.step }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "checkIn"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "renameOutput": true,
+              "outputKey": "nudge",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.step }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "nudge"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "renameOutput": true,
+              "outputKey": "final",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.step }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "final"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "7f35815d-06ec-4cf2-8954-651002a820ed",
+      "name": "Email Check-in",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Any questions about quote {{ $json.quoteNumber }}?",
+        "emailType": "text",
+        "message": "=Hi {{ $json.firstName }},\n\nI wanted to check you received quote {{ $json.quoteNumber }} for ${{ $json.amount }}. Happy to walk you through it or adjust anything.\n\nYou can view it here: {{ $json.quoteLink }}\n\nThanks,\n{{ $('Follow-up Settings').first().json.senderName }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "f6c41117-22e4-413a-b586-95d8ba76cecb"
+    },
+    {
+      "id": "5ed2c678-71a8-4e27-836e-d32d5e9055e5",
+      "name": "Text Nudge",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        192
+      ],
+      "parameters": {
+        "resource": "sms",
+        "operation": "send",
+        "from": "={{ $('Follow-up Settings').first().json.smsFromNumber }}",
+        "to": "={{ $json.phone }}",
+        "message": "=Hi {{ $json.firstName }}, it's {{ $('Follow-up Settings').first().json.businessName }}. Just checking in on quote {{ $json.quoteNumber }}. Any questions? Reply here and we'll call you. Reply STOP to opt out.",
+        "toWhatsapp": false,
+        "options": {}
+      },
+      "credentials": {
+        "twilioApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twilio"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "97edcdb9-004e-4239-bf51-7cb8bde02263",
+      "name": "Email Final Follow-up",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        384
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Should I keep quote {{ $json.quoteNumber }} open?",
+        "emailType": "text",
+        "message": "=Hi {{ $json.firstName }},\n\nI haven't heard back about quote {{ $json.quoteNumber }}, so I'll close it out at the end of the week unless you'd like to go ahead or change anything. A one-line reply is all I need.\n\n{{ $json.quoteLink }}\n\nThanks,\n{{ $('Follow-up Settings').first().json.senderName }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "6d913c2f-73a3-4eee-819a-15634620efb2"
+    },
+    {
+      "id": "9d3b5e37-27ca-49cc-8781-294ed4b3aab5",
+      "name": "Create Call Task",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        384
+      ],
+      "parameters": {
+        "resource": "engagement",
+        "operation": "create",
+        "authentication": "oAuth2",
+        "type": "task",
+        "metadata": {
+          "subject": "=Call about quote {{ $('Route by Day').item.json.quoteNumber }}: {{ $('Route by Day').item.json.name }}",
+          "body": "=No reply 10 days after quote {{ $('Route by Day').item.json.quoteNumber }} (${{ $('Route by Day').item.json.amount }}). Phone: {{ $('Route by Day').item.json.phone || 'not on file' }}",
+          "status": "NOT_STARTED"
+        },
+        "additionalFields": {},
+        "dueDate": "={{ $now.plus(1, 'day').toFormat('yyyy-MM-dd HH:mm:ss') }}"
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "21f1b30d-8a79-4291-8974-3d1eb0e3e4f1",
+      "name": "Update Quote Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1568,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "update",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "row_number"
+          ],
+          "value": {
+            "row_number": "={{ $('Pick Quotes to Chase').item.json.row_number }}",
+            "lastFollowUp": "={{ $('Pick Quotes to Chase').item.json.followUps }}",
+            "lastFollowUpDate": "={{ $now.toFormat('yyyy-MM-dd') }}"
+          },
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true
+            },
+            {
+              "id": "lastFollowUp",
+              "displayName": "lastFollowUp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "lastFollowUpDate",
+              "displayName": "lastFollowUpDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "d0ea2d15-9775-4596-99c4-ff4d3f0671c2",
+  "nodeGroups": [],
+  "connections": {
+    "Weekdays 10 AM": {
+      "main": [
+        [
+          {
+            "node": "Follow-up Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Follow-up Settings": {
+      "main": [
+        [
+          {
+            "node": "Read Open Quotes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Open Quotes": {
+      "main": [
+        [
+          {
+            "node": "Pick Quotes to Chase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick Quotes to Chase": {
+      "main": [
+        [
+          {
+            "node": "Route by Day",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Day": {
+      "main": [
+        [
+          {
+            "node": "Email Check-in",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Text Nudge",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Final Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Final Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Create Call Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Check-in": {
+      "main": [
+        [
+          {
+            "node": "Update Quote Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Nudge": {
+      "main": [
+        [
+          {
+            "node": "Update Quote Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Call Task": {
+      "main": [
+        [
+          {
+            "node": "Update Quote Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

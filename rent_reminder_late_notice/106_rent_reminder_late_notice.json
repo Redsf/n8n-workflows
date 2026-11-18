@@ -1,0 +1,564 @@
+{
+  "id": "FwCFjQ1ptNXmSMaX",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Rent Reminder & Late Notice",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "d8258d07-faf2-4b09-a4c5-213c19dcc8d4",
+      "name": "Daily 9 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        192
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "aa20ccfa-1fc7-4211-81f1-75a3cdf99311",
+      "name": "Rent Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        192
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "managerName",
+              "value": "Your Property Management",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "smsFromNumber",
+              "value": "+15550000000",
+              "type": "string"
+            },
+            {
+              "id": "s3",
+              "name": "rentDueDay",
+              "value": 1,
+              "type": "number"
+            },
+            {
+              "id": "s4",
+              "name": "lateFee",
+              "value": 50,
+              "type": "number"
+            },
+            {
+              "id": "s5",
+              "name": "payLink",
+              "value": "https://pay.example.com",
+              "type": "string"
+            },
+            {
+              "id": "s6",
+              "name": "today",
+              "value": "={{ $now.toFormat('yyyy-MM-dd') }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ac2a21b5-3af7-4b69-80de-c682b782a633",
+      "name": "Read Tenants",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        192
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "4dd79228-210e-4f39-bf94-5c1f880c919e",
+      "name": "Work Out Rent Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        192
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// For tenants who have not paid this month: reminder 3 days before the due day, late notice the day after, escalation on day 5.\nconst s = $('Rent Settings').first().json;\nconst today = new Date(s.today + 'T00:00:00Z');\nconst month = s.today.slice(0, 7);\nconst due = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), s.rentDueDay));\nconst next = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, s.rentDueDay));\nconst out = [];\nfor (const item of $input.all()) {\n  const t = item.json;\n  if (!t.tenantName || String(t.paidMonth) === month) continue;\n  const days = Math.round((today - due) / 86400000);\n  const before = Math.round((next - today) / 86400000);\n  let stage = null;\n  if (before === 3 && String(t.paidMonth) !== next.toISOString().slice(0, 7)) stage = 'reminder';\n  else if (days === 1) stage = 'late';\n  else if (days === 5) stage = 'escalate';\n  if (!stage) continue;\n  const rent = Number(t.rent || 0);\n  const fee = stage === 'reminder' ? 0 : s.lateFee;\n  out.push({ json: { row_number: t.row_number, tenantName: t.tenantName, firstName: t.tenantName.split(' ')[0], email: t.email || '', phone: t.phone || '',\n    unit: t.unit, rent: rent.toFixed(2), lateFee: fee, totalDue: (rent + fee).toFixed(2), stage,\n    dueDate: (stage === 'reminder' ? next : due).toISOString().slice(0, 10) } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "069e44a2-c543-49e5-aa9f-7e7000b22917",
+      "name": "Route by Stage",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        896,
+        192
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "renameOutput": true,
+              "outputKey": "reminder",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "reminder"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "renameOutput": true,
+              "outputKey": "late",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "late"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "renameOutput": true,
+              "outputKey": "escalate",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "escalate"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "14fcffb7-73f2-4fdb-bd34-a18cb2499e47",
+      "name": "Email Rent Reminder",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Rent reminder for {{ $json.unit }}",
+        "emailType": "text",
+        "message": "=Hi {{ $json.firstName }},\n\nFriendly reminder that rent of ${{ $json.rent }} for {{ $json.unit }} is due on {{ $json.dueDate }}. You can pay here: {{ $('Rent Settings').first().json.payLink }}\n\nThank you,\n{{ $('Rent Settings').first().json.managerName }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "cbb92739-afcc-4caa-9966-d464362706fd"
+    },
+    {
+      "id": "609555e2-5b73-448f-814a-c5a95d735790",
+      "name": "Text Rent Reminder",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        0
+      ],
+      "parameters": {
+        "resource": "sms",
+        "operation": "send",
+        "from": "={{ $('Rent Settings').first().json.smsFromNumber }}",
+        "to": "={{ $('Route by Stage').item.json.phone }}",
+        "message": "=Hi {{ $('Route by Stage').item.json.firstName }}, rent of ${{ $('Route by Stage').item.json.rent }} is due {{ $('Route by Stage').item.json.dueDate }}. Pay: {{ $('Rent Settings').first().json.payLink }} Reply STOP to opt out.",
+        "toWhatsapp": false,
+        "options": {}
+      },
+      "credentials": {
+        "twilioApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twilio"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "90a70371-1367-418c-920c-648896d5ed60",
+      "name": "Email Late Notice",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        192
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Late rent notice for {{ $json.unit }}",
+        "emailType": "text",
+        "message": "=Hi {{ $json.firstName }},\n\nWe have not received rent for {{ $json.unit }}, which was due on {{ $json.dueDate }}. Under your lease a late fee of ${{ $json.lateFee }} now applies, so the amount due is ${{ $json.totalDue }}.\n\nPay here: {{ $('Rent Settings').first().json.payLink }}\nIf you have already paid or need to talk about a plan, reply to this email.\n\n{{ $('Rent Settings').first().json.managerName }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "a7a56597-2175-41e4-b1bc-c70807fa2acf"
+    },
+    {
+      "id": "527201bc-91b6-4471-8568-803c4ca7bd31",
+      "name": "Text Late Notice",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        192
+      ],
+      "parameters": {
+        "resource": "sms",
+        "operation": "send",
+        "from": "={{ $('Rent Settings').first().json.smsFromNumber }}",
+        "to": "={{ $('Route by Stage').item.json.phone }}",
+        "message": "=Hi {{ $('Route by Stage').item.json.firstName }}, rent for {{ $('Route by Stage').item.json.unit }} is late. Amount due incl. late fee: ${{ $('Route by Stage').item.json.totalDue }}. Pay: {{ $('Rent Settings').first().json.payLink }}",
+        "toWhatsapp": false,
+        "options": {}
+      },
+      "credentials": {
+        "twilioApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twilio"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "c186a33b-e9d8-41d3-a972-f7e5927a0a9b",
+      "name": "Alert Property Manager",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        384
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "rent-collection"
+        },
+        "messageType": "text",
+        "text": "=:house: *Rent 5 days late:* {{ $json.tenantName }}, {{ $json.unit }}. Owes ${{ $json.totalDue }} including the late fee. Reminder, email and text already sent; time for a call or formal notice.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "c4ecd991-0942-42ba-b82c-1e368ba6e16c"
+    },
+    {
+      "id": "0be83b20-f1a2-4b4b-8810-9f8923a174cc",
+      "name": "Update Tenant Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1568,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "update",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "row_number"
+          ],
+          "value": {
+            "row_number": "={{ $('Work Out Rent Status').item.json.row_number }}",
+            "lastNotice": "={{ $('Work Out Rent Status').item.json.stage }} {{ $now.toFormat('yyyy-MM-dd') }}",
+            "lateFeeDue": "={{ $('Work Out Rent Status').item.json.lateFee }}"
+          },
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true
+            },
+            {
+              "id": "lastNotice",
+              "displayName": "lastNotice",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "lateFeeDue",
+              "displayName": "lateFeeDue",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "8ae82532-8eb7-4e4a-964e-47437042e5dd",
+  "nodeGroups": [],
+  "connections": {
+    "Daily 9 AM": {
+      "main": [
+        [
+          {
+            "node": "Rent Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rent Settings": {
+      "main": [
+        [
+          {
+            "node": "Read Tenants",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Tenants": {
+      "main": [
+        [
+          {
+            "node": "Work Out Rent Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Work Out Rent Status": {
+      "main": [
+        [
+          {
+            "node": "Route by Stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Stage": {
+      "main": [
+        [
+          {
+            "node": "Email Rent Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Late Notice",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alert Property Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Rent Reminder": {
+      "main": [
+        [
+          {
+            "node": "Text Rent Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Late Notice": {
+      "main": [
+        [
+          {
+            "node": "Text Late Notice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Rent Reminder": {
+      "main": [
+        [
+          {
+            "node": "Update Tenant Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Late Notice": {
+      "main": [
+        [
+          {
+            "node": "Update Tenant Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Property Manager": {
+      "main": [
+        [
+          {
+            "node": "Update Tenant Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

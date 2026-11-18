@@ -1,0 +1,548 @@
+{
+  "id": "aGqxIM8TUdOHCFra",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "No-Show Rebooking",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "817f07b1-bf3e-4e41-b069-ccd11dbfc8a7",
+      "name": "Appointment No-Show",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        96
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "appointment-no-show",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "240dfdcd-2d9e-49a9-8598-eae383f42d4b"
+    },
+    {
+      "id": "c2f70af9-18ee-4ddc-bb8a-c69ddb6fa283",
+      "name": "Normalize No-Show",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        96
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Accepts the no-show from your booking tool: name, email, phone, service, appointmentTime.\nconst b = $input.first().json.body || {};\nreturn [{ json: { name: b.name || '', firstName: (b.name || 'there').split(' ')[0], email: String(b.email || '').trim().toLowerCase(),\n  phone: b.phone || '', service: b.service || 'appointment', missedAt: b.appointmentTime || '',\n  businessName: 'Your Clinic', smsFromNumber: '+15550000000', calendarId: 'primary', slotMinutes: 60, openHour: 9, closeHour: 17 } }];"
+      }
+    },
+    {
+      "id": "d4f137bc-46ac-4c56-b397-5fe5878a7207",
+      "name": "Has Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        96
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test($json.email) }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "7d734579-5e05-4903-b230-17085c737aef",
+      "name": "Get Booked Events",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.4,
+      "position": [
+        672,
+        96
+      ],
+      "parameters": {
+        "resource": "event",
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Normalize No-Show').item.json.calendarId }}"
+        },
+        "returnAll": true,
+        "timeMin": "={{ $now.plus(1, 'day').startOf('day').toISO() }}",
+        "timeMax": "={{ $now.plus(6, 'days').endOf('day').toISO() }}",
+        "options": {
+          "orderBy": "startTime",
+          "recurringEventHandling": "expand"
+        }
+      },
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Calendar"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "c1394457-413a-42c7-80b4-cd905c89c30e",
+      "name": "Find 3 Open Slots",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        96
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Walk the next 5 weekdays in business hours and keep the first 3 free slots.\nconst p = $('Normalize No-Show').first().json;\nconst busy = $input.all().map(i => i.json).filter(e => e.start && e.end)\n  .map(e => [new Date(e.start.dateTime || e.start.date), new Date(e.end.dateTime || e.end.date)]);\nconst slots = [];\nconst day = new Date(); day.setDate(day.getDate() + 1);\nfor (let d = 0; d < 10 && slots.length < 3; d++, day.setDate(day.getDate() + 1)) {\n  if ([0, 6].includes(day.getDay())) continue;\n  for (let h = p.openHour; h + p.slotMinutes / 60 <= p.closeHour && slots.length < 3; h++) {\n    const s = new Date(day); s.setHours(h, 0, 0, 0);\n    const e = new Date(s.getTime() + p.slotMinutes * 60000);\n    if (!busy.some(([bs, be]) => s < be && e > bs)) { slots.push(s); h += 2; }\n  }\n}\nconst label = s => s.toLocaleString('en-US', { weekday: 'long', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });\nreturn [{ json: { ...p, slots: slots.map(s => s.toISOString()), slot1: label(slots[0]), slot2: label(slots[1]), slot3: label(slots[2]) } }];"
+      }
+    },
+    {
+      "id": "8dc32966-f43c-45ff-97a3-943a274c0afc",
+      "name": "Text Heads-up",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        96
+      ],
+      "parameters": {
+        "resource": "sms",
+        "operation": "send",
+        "from": "={{ $json.smsFromNumber }}",
+        "to": "={{ $json.phone }}",
+        "message": "=Hi {{ $json.firstName }}, we missed you today at {{ $json.businessName }}. We just emailed you 3 new times, tap one to rebook. Reply STOP to opt out.",
+        "toWhatsapp": false,
+        "options": {}
+      },
+      "credentials": {
+        "twilioApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twilio"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "22ea6766-fc0d-4706-903f-89e4cf45a7cb",
+      "name": "Offer New Times",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        96
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendAndWait",
+        "sendTo": "={{ $('Find 3 Open Slots').item.json.email }}",
+        "subject": "=Let's find you a new time, {{ $('Find 3 Open Slots').item.json.firstName }}",
+        "message": "=Hi {{ $('Find 3 Open Slots').item.json.firstName }},\n\nWe missed you for your {{ $('Find 3 Open Slots').item.json.service }}. No problem, these times are open this week. Pick one and it is booked.",
+        "responseType": "customForm",
+        "defineForm": "fields",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Pick a new time",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "={{ $('Find 3 Open Slots').item.json.slot1 }}"
+                  },
+                  {
+                    "option": "={{ $('Find 3 Open Slots').item.json.slot2 }}"
+                  },
+                  {
+                    "option": "={{ $('Find 3 Open Slots').item.json.slot3 }}"
+                  },
+                  {
+                    "option": "None of these, please call me"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false,
+          "messageButtonLabel": "Choose a time",
+          "responseFormTitle": "Rebook your appointment",
+          "limitWaitTime": {
+            "values": {
+              "limitType": "afterTimeInterval",
+              "resumeAmount": 3,
+              "resumeUnit": "days"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "a8d7d39f-8337-4e0f-8da5-0f1999f6aa8a"
+    },
+    {
+      "id": "8ab3d6f5-7af9-447f-9013-7110fa3703d4",
+      "name": "Read Choice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        96
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const p = $('Find 3 Open Slots').first().json;\nconst pick = $input.first().json.data?.['Pick a new time'] || '';\nconst i = [p.slot1, p.slot2, p.slot3].indexOf(pick);\nreturn [{ json: { ...p, picked: i >= 0, start: i >= 0 ? p.slots[i] : '', choice: pick || 'no answer' } }];"
+      }
+    },
+    {
+      "id": "65a32e0c-0e92-4343-98f0-5b84946b59ee",
+      "name": "Picked a Time?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1792,
+        96
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.picked }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "1257d51b-2e71-4b37-81a7-515377aa7dfb",
+      "name": "Book Appointment",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.4,
+      "position": [
+        2016,
+        0
+      ],
+      "parameters": {
+        "resource": "event",
+        "operation": "create",
+        "calendar": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.calendarId }}"
+        },
+        "start": "={{ $json.start }}",
+        "end": "={{ DateTime.fromISO($json.start).plus({ minutes: $json.slotMinutes }).toISO() }}",
+        "useDefaultReminders": true,
+        "additionalFields": {
+          "summary": "={{ $json.service }}: {{ $json.name }} (rebooked)",
+          "attendees": [
+            "={{ $json.email }}"
+          ],
+          "sendUpdates": "all"
+        }
+      },
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Calendar"
+        }
+      }
+    },
+    {
+      "id": "e511f9b2-8e95-4eef-bd8b-91e18c8a639d",
+      "name": "Confirm New Time",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2240,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Read Choice').item.json.email }}",
+        "subject": "=You're booked: {{ $('Read Choice').item.json.choice }}",
+        "emailType": "text",
+        "message": "=Hi {{ $('Read Choice').item.json.firstName }},\n\nYou're all set for {{ $('Read Choice').item.json.choice }}. A calendar invite is on its way.\n\nSee you then,\n{{ $('Read Choice').item.json.businessName }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "6ab84a2d-56cc-4cc3-9b47-f75d679acb6f"
+    },
+    {
+      "id": "7cbf5ade-d104-40a1-9804-e515c5467373",
+      "name": "Ask Front Desk to Call",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        2016,
+        192
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "front-desk"
+        },
+        "messageType": "text",
+        "text": "=:telephone_receiver: *No-show needs a call:* {{ $json.name }} ({{ $json.phone || $json.email }}) missed their {{ $json.service }} and answered: _{{ $json.choice }}_.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "3ec363e0-8628-4044-8ff6-275bec6c572b"
+    },
+    {
+      "id": "262353d4-d601-429c-848c-616a1c6ccb7e",
+      "name": "Log No-Show",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2464,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "loggedAt": "={{ $now.toISO() }}",
+            "name": "={{ $('Read Choice').item.json.name }}",
+            "email": "={{ $('Read Choice').item.json.email }}",
+            "service": "={{ $('Read Choice').item.json.service }}",
+            "missedAt": "={{ $('Read Choice').item.json.missedAt }}",
+            "outcome": "={{ $('Read Choice').item.json.picked ? 'rebooked' : 'needs call' }}",
+            "newTime": "={{ $('Read Choice').item.json.start }}"
+          },
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "238d6f9a-bb2d-4ba0-b7a4-0f204759e63b",
+  "nodeGroups": [],
+  "connections": {
+    "Appointment No-Show": {
+      "main": [
+        [
+          {
+            "node": "Normalize No-Show",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize No-Show": {
+      "main": [
+        [
+          {
+            "node": "Has Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Email?": {
+      "main": [
+        [
+          {
+            "node": "Get Booked Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Booked Events": {
+      "main": [
+        [
+          {
+            "node": "Find 3 Open Slots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find 3 Open Slots": {
+      "main": [
+        [
+          {
+            "node": "Text Heads-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Heads-up": {
+      "main": [
+        [
+          {
+            "node": "Offer New Times",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Offer New Times": {
+      "main": [
+        [
+          {
+            "node": "Read Choice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Choice": {
+      "main": [
+        [
+          {
+            "node": "Picked a Time?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Picked a Time?": {
+      "main": [
+        [
+          {
+            "node": "Book Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ask Front Desk to Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Book Appointment": {
+      "main": [
+        [
+          {
+            "node": "Confirm New Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm New Time": {
+      "main": [
+        [
+          {
+            "node": "Log No-Show",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask Front Desk to Call": {
+      "main": [
+        [
+          {
+            "node": "Log No-Show",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

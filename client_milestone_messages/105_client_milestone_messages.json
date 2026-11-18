@@ -1,0 +1,397 @@
+{
+  "id": "XRLsHRIsopPFVn3Z",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Client Birthday & Home Anniversary Messages",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "93202c32-2ff8-49e4-aa95-2b06771a8a11",
+      "name": "Daily 8 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "7c8fee8e-1ed2-462f-969c-f93e5c150b18",
+      "name": "Message Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        0
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "businessName",
+              "value": "Your Realty",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "agentName",
+              "value": "Sam Lee",
+              "type": "string"
+            },
+            {
+              "id": "s3",
+              "name": "smsFromNumber",
+              "value": "+15550000000",
+              "type": "string"
+            },
+            {
+              "id": "s4",
+              "name": "today",
+              "value": "={{ $now.toFormat('MM-dd') }}",
+              "type": "string"
+            },
+            {
+              "id": "s5",
+              "name": "year",
+              "value": "={{ $now.year }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "90c7a564-9161-489e-bc97-42ff007f6be5",
+      "name": "Read Client List",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "2929ee7d-62df-4f32-80c5-04d05ce509fa",
+      "name": "Find Milestones Today",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Birthdays and home (or policy) anniversaries that fall on today's month and day.\nconst s = $('Message Settings').first().json;\nconst out = [];\nfor (const item of $input.all()) {\n  const c = item.json;\n  if (!c.email) continue;\n  const md = d => String(d || '').slice(5, 10);\n  const base = { name: c.name, firstName: (c.name || 'there').split(' ')[0], email: c.email, phone: c.phone || '', detail: c.propertyAddress || '',\n    notes: c.notes || '', agentName: c.agent || s.agentName, businessName: s.businessName };\n  if (c.birthday && md(c.birthday) === s.today) out.push({ json: { ...base, occasion: 'birthday', years: '' } });\n  if (c.closeDate && md(c.closeDate) === s.today) {\n    const years = s.year - Number(String(c.closeDate).slice(0, 4));\n    if (years > 0) out.push({ json: { ...base, occasion: 'home anniversary', years } });\n  }\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "894fd26f-be44-493d-9cc4-9d39f50db9eb",
+      "name": "Write Personal Message",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        896,
+        0
+      ],
+      "parameters": {
+        "promptType": "define",
+        "hasOutputParser": true,
+        "text": "=Client: {{ $json.name }}\nOccasion: {{ $json.occasion }}{{ $json.years ? ' (' + $json.years + ' years)' : '' }}\nProperty or policy: {{ $json.detail || 'not given' }}\nNotes: {{ $json.notes || 'none' }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "=You write short, warm notes from {{ $json.agentName }} at {{ $json.businessName }} to a past client. Sound like a real person, not a brand. No sales pitch, no exclamation overload, no emojis in the email. Mention one personal detail if given. Email: 3-5 sentences. SMS: under 240 characters, ends with the agent's first name."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "c7cdeb16-589a-4178-947e-cc4c23c019d9",
+      "name": "Claude Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        912,
+        208
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-5-5"
+        },
+        "options": {
+          "maxTokensToSample": 800,
+          "temperature": 0.4
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gateway credits"
+        }
+      }
+    },
+    {
+      "id": "fafb0e26-7ba0-4d87-8146-1d244ee9d4e5",
+      "name": "Output Schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1040,
+        208
+      ],
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\"subject\": \"Happy 3-year home anniversary, Maria\", \"email\": \"Hi Maria, ...\", \"sms\": \"Hi Maria, ...\"}"
+      }
+    },
+    {
+      "id": "47200ac1-478c-4fa2-9ad2-33c28c09aca5",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1232,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Find Milestones Today').item.json.email }}",
+        "subject": "={{ $json.output.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.output.email }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "a84ee333-9cc7-4bcf-af27-3c2dd9399848"
+    },
+    {
+      "id": "12a37cc5-a396-4a57-b06f-8587541cb847",
+      "name": "Send Text",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1456,
+        0
+      ],
+      "parameters": {
+        "resource": "sms",
+        "operation": "send",
+        "from": "={{ $('Message Settings').first().json.smsFromNumber }}",
+        "to": "={{ $('Find Milestones Today').item.json.phone }}",
+        "message": "={{ $('Write Personal Message').item.json.output.sms }} Reply STOP to opt out.",
+        "toWhatsapp": false,
+        "options": {}
+      },
+      "credentials": {
+        "twilioApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twilio"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "10590341-ae26-4dcd-a1cf-e0b26b2ac36d",
+      "name": "Log Message",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1680,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Messages"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "sentAt": "={{ $now.toISO() }}",
+            "name": "={{ $('Find Milestones Today').item.json.name }}",
+            "email": "={{ $('Find Milestones Today').item.json.email }}",
+            "occasion": "={{ $('Find Milestones Today').item.json.occasion }}",
+            "subject": "={{ $('Write Personal Message').item.json.output.subject }}"
+          },
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "b431f7ab-3267-4419-8cb6-eba6bcd9f9e9",
+  "nodeGroups": [],
+  "connections": {
+    "Daily 8 AM": {
+      "main": [
+        [
+          {
+            "node": "Message Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message Settings": {
+      "main": [
+        [
+          {
+            "node": "Read Client List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Client List": {
+      "main": [
+        [
+          {
+            "node": "Find Milestones Today",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Milestones Today": {
+      "main": [
+        [
+          {
+            "node": "Write Personal Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Personal Message": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Send Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Text": {
+      "main": [
+        [
+          {
+            "node": "Log Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Write Personal Message",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Output Schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Write Personal Message",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

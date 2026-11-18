@@ -281,11 +281,14 @@ def build_section(workflow: dict) -> str:
     )
 
 
+NON_WORKFLOW_DIRS = {"scripts", "assets"}
+
+
 def workflow_dirs() -> list[Path]:
     return sorted(
         d
         for d in REPO_ROOT.iterdir()
-        if d.is_dir() and not d.name.startswith(".") and d.name != "scripts"
+        if d.is_dir() and not d.name.startswith(".") and d.name not in NON_WORKFLOW_DIRS
     )
 
 

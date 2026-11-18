@@ -2,6 +2,8 @@
 
 [![validate](https://github.com/Redsf/n8n-workflows/actions/workflows/validate.yml/badge.svg)](https://github.com/Redsf/n8n-workflows/actions/workflows/validate.yml)
 
+![Six workflows from this repo as real n8n canvases: abandoned cart recovery, WooCommerce AI support agent, invoice processing, applicant screening, order and fulfillment sync, and review management, each labelled with its production outcome](assets/portfolio-hero.png)
+
 A collection of 81 production-style n8n automations covering AI agents, RAG knowledge systems, e-commerce operations, real estate, and HR document processing. Each workflow lives in its own folder as a ready-to-import JSON file with a README explaining what it does, how it's wired, and how to configure it.
 
 These solve real operational problems: recovering abandoned carts, qualifying and routing leads, extracting data from invoices, answering questions with grounded AI, and keeping teams informed without manual busywork.

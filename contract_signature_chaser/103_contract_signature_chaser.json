@@ -1,0 +1,514 @@
+{
+  "id": "1QHjM9amhI8sEHY0",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Contract Signature Chaser",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "35179ff4-7d87-4d87-81ca-ac7eac65ec7a",
+      "name": "Weekdays 9 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        192
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "07680b98-1ec1-4db6-8803-b76bb2e35e12",
+      "name": "Chaser Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        192
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "senderName",
+              "value": "Sam, Your Company",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "today",
+              "value": "={{ $now.toFormat('yyyy-MM-dd') }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "9681af1e-590f-4174-a7a3-e635b4e03357",
+      "name": "Read Unsigned Contracts",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        192
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": "sent"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "72415ccd-b1b1-42e0-8246-8988e6a5808d",
+      "name": "Pick Contracts to Chase",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        192
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Remind 2 and 4 days after sending, final reminder at day 7, escalate to the owner at day 9.\nconst today = new Date($('Chaser Settings').first().json.today + 'T00:00:00Z');\nconst out = [];\nfor (const item of $input.all()) {\n  const c = item.json;\n  if (!c.email || !c.sentDate) continue;\n  const days = Math.round((today - new Date(String(c.sentDate).slice(0, 10) + 'T00:00:00Z')) / 86400000);\n  const stage = { 2: 'reminder', 4: 'reminder', 7: 'final', 9: 'escalate' }[days];\n  if (!stage) continue;\n  out.push({ json: { row_number: c.row_number, firstName: (c.clientName || 'there').split(' ')[0], clientName: c.clientName, email: c.email,\n    contractName: c.contractName, signLink: c.signLink, ownerEmail: c.ownerEmail || '', daysWaiting: days, stage } });\n}\nreturn out;"
+      }
+    },
+    {
+      "id": "e9b80f7e-d268-4957-b240-5a9ec40e8e7f",
+      "name": "Route by Stage",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        896,
+        192
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "renameOutput": true,
+              "outputKey": "reminder",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "reminder"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "renameOutput": true,
+              "outputKey": "final",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "final"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "renameOutput": true,
+              "outputKey": "escalate",
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "escalate"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "39bb5647-3913-43c3-b862-fdceb20f13b7",
+      "name": "Email Signing Reminder",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Reminder: {{ $json.contractName }} is ready to sign",
+        "emailType": "text",
+        "message": "=Hi {{ $json.firstName }},\n\nA quick reminder that {{ $json.contractName }} is waiting for your signature. It takes about two minutes:\n{{ $json.signLink }}\n\nAny questions, just reply.\n\n{{ $('Chaser Settings').first().json.senderName }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "8d8ad749-ccaa-4f3c-816e-060944114b2e"
+    },
+    {
+      "id": "ee98393b-0c47-4ac8-8862-da02dba6e58b",
+      "name": "Email Last Reminder",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        192
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Last reminder: {{ $json.contractName }}",
+        "emailType": "text",
+        "message": "=Hi {{ $json.firstName }},\n\n{{ $json.contractName }} is still unsigned. We are holding your start date for now; once it's signed we can lock it in:\n{{ $json.signLink }}\n\nIf anything in the agreement needs to change, reply and we'll sort it out.\n\n{{ $('Chaser Settings').first().json.senderName }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "1e46f281-7f20-41e4-9ca2-8445d1cba5e9"
+    },
+    {
+      "id": "8d06b591-2e9e-45e4-a94a-76dca877a6f3",
+      "name": "Create Call Task",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        384
+      ],
+      "parameters": {
+        "resource": "engagement",
+        "operation": "create",
+        "authentication": "oAuth2",
+        "type": "task",
+        "metadata": {
+          "subject": "=Call {{ $json.clientName }}: {{ $json.contractName }} unsigned for {{ $json.daysWaiting }} days",
+          "body": "=Contract sent {{ $json.daysWaiting }} days ago and still unsigned. Signing link: {{ $json.signLink }}",
+          "status": "NOT_STARTED"
+        },
+        "additionalFields": {},
+        "dueDate": "={{ $now.plus(1, 'day').toFormat('yyyy-MM-dd HH:mm:ss') }}"
+      },
+      "credentials": {
+        "hubspotOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "id": "a4ccbc48-67c0-4e37-95f7-07f0cc6ea3f5",
+      "name": "Alert Owner",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1344,
+        384
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "sales"
+        },
+        "messageType": "text",
+        "text": "=:writing_hand: *Contract stalled:* {{ $('Route by Stage').item.json.clientName }} has not signed _{{ $('Route by Stage').item.json.contractName }}_ after {{ $('Route by Stage').item.json.daysWaiting }} days and three reminders. A call task is in HubSpot.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "012da9c6-5c76-4e3b-8532-6f35653b5597"
+    },
+    {
+      "id": "8bcd24e9-1f16-453e-bc85-043e03aff888",
+      "name": "Update Contract Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1568,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "update",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "row_number"
+          ],
+          "value": {
+            "row_number": "={{ $('Pick Contracts to Chase').item.json.row_number }}",
+            "lastReminder": "={{ $('Pick Contracts to Chase').item.json.stage }}",
+            "lastReminderDate": "={{ $now.toFormat('yyyy-MM-dd') }}"
+          },
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true
+            },
+            {
+              "id": "lastReminder",
+              "displayName": "lastReminder",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "lastReminderDate",
+              "displayName": "lastReminderDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "832061fe-3a6d-44a5-af9f-372d238fe9ab",
+  "nodeGroups": [],
+  "connections": {
+    "Weekdays 9 AM": {
+      "main": [
+        [
+          {
+            "node": "Chaser Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chaser Settings": {
+      "main": [
+        [
+          {
+            "node": "Read Unsigned Contracts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Unsigned Contracts": {
+      "main": [
+        [
+          {
+            "node": "Pick Contracts to Chase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick Contracts to Chase": {
+      "main": [
+        [
+          {
+            "node": "Route by Stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Stage": {
+      "main": [
+        [
+          {
+            "node": "Email Signing Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Last Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Call Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Call Task": {
+      "main": [
+        [
+          {
+            "node": "Alert Owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Signing Reminder": {
+      "main": [
+        [
+          {
+            "node": "Update Contract Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Last Reminder": {
+      "main": [
+        [
+          {
+            "node": "Update Contract Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Owner": {
+      "main": [
+        [
+          {
+            "node": "Update Contract Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

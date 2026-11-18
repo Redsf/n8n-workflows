@@ -1,0 +1,489 @@
+{
+  "id": "Kx8xIg1kxjtYRTtt",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Purchase & Expense Approval in Slack",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "96058a2b-6d56-42ef-b70b-739d4f11de13",
+      "name": "Purchase Request Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        0,
+        96
+      ],
+      "parameters": {
+        "formTitle": "Purchase or expense request",
+        "formDescription": "Fill this in before you buy. Small amounts are approved automatically.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Your name",
+              "fieldName": "name",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Your work email",
+              "fieldName": "email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "What are you buying?",
+              "fieldName": "item",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Vendor",
+              "fieldName": "vendor",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Amount (USD)",
+              "fieldName": "amount",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Category",
+              "fieldName": "category",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Software"
+                  },
+                  {
+                    "option": "Equipment"
+                  },
+                  {
+                    "option": "Travel"
+                  },
+                  {
+                    "option": "Marketing"
+                  },
+                  {
+                    "option": "Supplies"
+                  },
+                  {
+                    "option": "Other"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Why is it needed?",
+              "fieldName": "reason",
+              "fieldType": "textarea",
+              "requiredField": true
+            }
+          ]
+        },
+        "responseMode": "onReceived",
+        "options": {
+          "path": "purchase-request",
+          "appendAttribution": false,
+          "respondWithOptions": {
+            "values": {
+              "respondWith": "text",
+              "formSubmittedText": "Thanks! You will get an email as soon as this is decided."
+            }
+          }
+        }
+      },
+      "webhookId": "3a24d4a6-1930-4a68-8e53-9e41388a0b08"
+    },
+    {
+      "id": "0abf4c6b-1ed0-4013-8e89-297919c3e56a",
+      "name": "Normalize Request",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        96
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "email",
+              "value": "={{ $json.email.trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "s3",
+              "name": "item",
+              "value": "={{ $json.item }}",
+              "type": "string"
+            },
+            {
+              "id": "s4",
+              "name": "vendor",
+              "value": "={{ $json.vendor }}",
+              "type": "string"
+            },
+            {
+              "id": "s5",
+              "name": "amount",
+              "value": "={{ Number($json.amount) }}",
+              "type": "string"
+            },
+            {
+              "id": "s6",
+              "name": "category",
+              "value": "={{ $json.category }}",
+              "type": "string"
+            },
+            {
+              "id": "s7",
+              "name": "reason",
+              "value": "={{ $json.reason }}",
+              "type": "string"
+            },
+            {
+              "id": "s8",
+              "name": "autoApproveLimit",
+              "value": 100,
+              "type": "number"
+            },
+            {
+              "id": "s9",
+              "name": "requestId",
+              "value": "={{ 'PR-' + $now.toFormat('yyMMdd-HHmmss') }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "b0062449-3f31-4566-9ccf-3a9eaa36fcc7",
+      "name": "Under Auto-Approve Limit?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        96
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.amount <= $json.autoApproveLimit }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "13e0eae3-5ef3-45c1-a539-f2a8047e8f82",
+      "name": "Ask for Approval",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        192
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendAndWait",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "approvals"
+        },
+        "message": "=*Purchase request {{ $json.requestId }}* from {{ $json.name }}\n*{{ $json.item }}* from {{ $json.vendor }}: *${{ $json.amount }}* ({{ $json.category }})\nWhy: {{ $json.reason }}",
+        "responseType": "approval",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "Approve",
+            "disapproveLabel": "Reject"
+          }
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "limitType": "afterTimeInterval",
+              "resumeAmount": 3,
+              "resumeUnit": "days"
+            }
+          }
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "83464472-55c1-4f4a-914e-df0716e49ef7"
+    },
+    {
+      "id": "3cb146f7-70ce-4121-81cf-116a8bede6e7",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        192
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.data.approved }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "987169a8-f582-4e45-a8e2-5850e3c799c5",
+      "name": "Email Approved",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Normalize Request').item.json.email }}",
+        "subject": "=Approved: {{ $('Normalize Request').item.json.item }} ({{ $('Normalize Request').item.json.requestId }})",
+        "emailType": "text",
+        "message": "=Hi {{ $('Normalize Request').item.json.name }},\n\nYour request for {{ $('Normalize Request').item.json.item }} from {{ $('Normalize Request').item.json.vendor }} (${{ $('Normalize Request').item.json.amount }}) is approved. Go ahead and buy it, then send the receipt to accounts with reference {{ $('Normalize Request').item.json.requestId }}.\n\nThanks",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "6c15e21a-67b9-4612-b3d2-1f6fffda5df5"
+    },
+    {
+      "id": "8c56900e-4aba-45a2-9968-3f8a27a9a008",
+      "name": "Email Rejected",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        192
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Normalize Request').item.json.email }}",
+        "subject": "=Not approved: {{ $('Normalize Request').item.json.item }} ({{ $('Normalize Request').item.json.requestId }})",
+        "emailType": "text",
+        "message": "=Hi {{ $('Normalize Request').item.json.name }},\n\nYour request for {{ $('Normalize Request').item.json.item }} (${{ $('Normalize Request').item.json.amount }}) was not approved this time, or no one answered within 3 days. Have a quick word with your manager if it is still needed.\n\nThanks",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "db7c68bd-8e9a-4aa9-bacd-cc08a8ebed13"
+    },
+    {
+      "id": "6ab218d0-6bd1-4e93-af8f-c0683018bab2",
+      "name": "Log Request",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1344,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "requestId": "={{ $('Normalize Request').item.json.requestId }}",
+            "requestedAt": "={{ $now.toISO() }}",
+            "name": "={{ $('Normalize Request').item.json.name }}",
+            "item": "={{ $('Normalize Request').item.json.item }}",
+            "vendor": "={{ $('Normalize Request').item.json.vendor }}",
+            "amount": "={{ $('Normalize Request').item.json.amount }}",
+            "category": "={{ $('Normalize Request').item.json.category }}",
+            "decision": "={{ $('Ask for Approval').isExecuted ? ($('Ask for Approval').item.json.data.approved ? 'approved' : 'rejected') : 'auto-approved' }}"
+          },
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "b4170d87-e3ee-48b8-af04-b0928a347d54",
+  "nodeGroups": [],
+  "connections": {
+    "Purchase Request Form": {
+      "main": [
+        [
+          {
+            "node": "Normalize Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Request": {
+      "main": [
+        [
+          {
+            "node": "Under Auto-Approve Limit?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Under Auto-Approve Limit?": {
+      "main": [
+        [
+          {
+            "node": "Email Approved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ask for Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask for Approval": {
+      "main": [
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Email Approved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Approved": {
+      "main": [
+        [
+          {
+            "node": "Log Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Rejected": {
+      "main": [
+        [
+          {
+            "node": "Log Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

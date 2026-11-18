@@ -1,0 +1,472 @@
+{
+  "id": "hg7PF6h3JGKNTs3d",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Churn-Risk Win-back",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "80de5310-7c5e-49d1-aa20-823a2b9e187e",
+      "name": "Mondays 9 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bba77698-93a5-4905-9680-a5959f3b6902",
+      "name": "Win-back Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        0
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "businessName",
+              "value": "Your Shop",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "inactiveDays",
+              "value": 60,
+              "type": "number"
+            },
+            {
+              "id": "s3",
+              "name": "maxPerRun",
+              "value": 50,
+              "type": "number"
+            },
+            {
+              "id": "s4",
+              "name": "offer",
+              "value": "15% off your next order",
+              "type": "string"
+            },
+            {
+              "id": "s5",
+              "name": "offerCode",
+              "value": "COMEBACK15",
+              "type": "string"
+            },
+            {
+              "id": "s6",
+              "name": "shopLink",
+              "value": "https://yourshop.example.com",
+              "type": "string"
+            },
+            {
+              "id": "s7",
+              "name": "today",
+              "value": "={{ $now.toFormat('yyyy-MM-dd') }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "fc4ec6b2-dcec-4cbe-b172-0785304c5926",
+      "name": "Read Customers",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "2d4c8627-ea1b-4569-960d-16021b02857e",
+      "name": "Find Lapsed Customers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Customers with no order for inactiveDays (but under a year), who have not had a win-back email in the last 90 days.\nconst s = $('Win-back Settings').first().json;\nconst today = new Date(s.today + 'T00:00:00Z');\nconst days = d => Math.round((today - new Date(String(d).slice(0, 10) + 'T00:00:00Z')) / 86400000);\nreturn $input.all().map(i => i.json)\n  .filter(c => c.email && c.lastOrderDate && days(c.lastOrderDate) >= s.inactiveDays && days(c.lastOrderDate) < 365)\n  .filter(c => !c.winbackSentAt || days(c.winbackSentAt) > 90)\n  .sort((a, b) => Number(b.totalSpent || 0) - Number(a.totalSpent || 0))\n  .slice(0, s.maxPerRun)\n  .map(c => ({ json: { row_number: c.row_number, firstName: (c.name || 'there').split(' ')[0], email: c.email, lastOrderDate: c.lastOrderDate,\n    daysSince: days(c.lastOrderDate), orderCount: c.orderCount || 1, totalSpent: c.totalSpent || 0, favoriteProduct: c.favoriteProduct || '',\n    businessName: s.businessName, offer: s.offer, offerCode: s.offerCode, shopLink: s.shopLink } }));"
+      }
+    },
+    {
+      "id": "de23cc13-b748-4155-855b-2e1986d72a4c",
+      "name": "Write Win-back Email",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        896,
+        0
+      ],
+      "parameters": {
+        "promptType": "define",
+        "hasOutputParser": true,
+        "text": "=Customer: {{ $json.firstName }}\nLast order: {{ $json.lastOrderDate }} ({{ $json.daysSince }} days ago)\nOrders so far: {{ $json.orderCount }}  Total spent: ${{ $json.totalSpent }}\nFavourite product: {{ $json.favoriteProduct || 'unknown' }}\nOffer: {{ $json.offer }} with code {{ $json.offerCode }}\nShop link: {{ $json.shopLink }}",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "SystemMessagePromptTemplate",
+              "message": "=You write short win-back emails for {{ $json.businessName }}. Friendly, specific to what the customer bought, never guilt-trip. 4 sentences max, plain text, no emojis. Include the offer code exactly once and the shop link once."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "037f272b-3223-4e73-bb13-564f1a0d1d4e",
+      "name": "Claude Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        912,
+        208
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-sonnet-5-5"
+        },
+        "options": {
+          "maxTokensToSample": 800,
+          "temperature": 0.4
+        }
+      },
+      "credentials": {
+        "anthropicApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gateway credits"
+        }
+      }
+    },
+    {
+      "id": "8edbeaf5-a6f4-4cd7-9099-3648f5d7457f",
+      "name": "Output Schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1040,
+        208
+      ],
+      "parameters": {
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\"subject\": \"We saved your favourite, Alex\", \"body\": \"Hi Alex, ...\"}"
+      }
+    },
+    {
+      "id": "9ee5eba1-f509-4d85-aeca-1e52df9a77d0",
+      "name": "Send Win-back Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1232,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Find Lapsed Customers').item.json.email }}",
+        "subject": "={{ $json.output.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.output.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "0dadc332-c666-4afd-a5b5-74d29fdb4b4b"
+    },
+    {
+      "id": "7f166daa-1e61-477f-a798-cfbba2ff403e",
+      "name": "Mark Win-back Sent",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1456,
+        0
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "update",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "row_number"
+          ],
+          "value": {
+            "row_number": "={{ $('Find Lapsed Customers').item.json.row_number }}",
+            "winbackSentAt": "={{ $now.toFormat('yyyy-MM-dd') }}",
+            "winbackCode": "={{ $('Find Lapsed Customers').item.json.offerCode }}"
+          },
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true
+            },
+            {
+              "id": "winbackSentAt",
+              "displayName": "winbackSentAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "winbackCode",
+              "displayName": "winbackCode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "82100ed8-ff83-44a6-b570-6a1bc6f0fdaa",
+      "name": "Summarize Run",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const sent = $('Find Lapsed Customers').all().map(i => i.json);\nconst value = sent.reduce((t, c) => t + Number(c.totalSpent || 0), 0);\nreturn [{ json: { count: sent.length, lifetimeValue: value.toFixed(2), top: sent.slice(0, 5).map(c => `${c.firstName} ($${c.totalSpent}, ${c.daysSince} days)`).join(', ') } }];"
+      }
+    },
+    {
+      "id": "517f6db0-6eed-4b32-bbab-01e5f6031fe6",
+      "name": "Post Summary",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1904,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "marketing"
+        },
+        "messageType": "text",
+        "text": "=:wave: *Win-back run:* emailed {{ $json.count }} lapsed customers (lifetime value ${{ $json.lifetimeValue }}) with code {{ $('Win-back Settings').first().json.offerCode }}. Top: {{ $json.top }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "ca90fb42-e18d-423a-ba18-ba8e0bae49be"
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "3b5b794c-01ec-4695-bf99-e0381698174b",
+  "nodeGroups": [],
+  "connections": {
+    "Mondays 9 AM": {
+      "main": [
+        [
+          {
+            "node": "Win-back Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Win-back Settings": {
+      "main": [
+        [
+          {
+            "node": "Read Customers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Customers": {
+      "main": [
+        [
+          {
+            "node": "Find Lapsed Customers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Lapsed Customers": {
+      "main": [
+        [
+          {
+            "node": "Write Win-back Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Win-back Email": {
+      "main": [
+        [
+          {
+            "node": "Send Win-back Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Win-back Email": {
+      "main": [
+        [
+          {
+            "node": "Mark Win-back Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Win-back Sent": {
+      "main": [
+        [
+          {
+            "node": "Summarize Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize Run": {
+      "main": [
+        [
+          {
+            "node": "Post Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Write Win-back Email",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Output Schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Write Win-back Email",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

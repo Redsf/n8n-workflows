@@ -1,0 +1,632 @@
+{
+  "id": "odntjTUN8Cvm3XRJ",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Webinar Registration & No-Show Replay",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "81df75b1-ab55-4ef0-a028-9876863b7c17",
+      "name": "Registration Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        0,
+        96
+      ],
+      "parameters": {
+        "formTitle": "Save your seat",
+        "formDescription": "Free live session. We will email you the link.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "First name",
+              "fieldName": "firstName",
+              "fieldType": "text",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldName": "email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Company",
+              "fieldName": "company",
+              "fieldType": "text"
+            }
+          ]
+        },
+        "responseMode": "onReceived",
+        "options": {
+          "path": "webinar-register",
+          "appendAttribution": false,
+          "respondWithOptions": {
+            "values": {
+              "respondWith": "text",
+              "formSubmittedText": "You're registered! Check your inbox for the calendar invite."
+            }
+          }
+        }
+      },
+      "webhookId": "f3682aff-59d3-4275-a469-35e631035920"
+    },
+    {
+      "id": "0239bd62-f93e-454c-a6d9-a7543b25ef42",
+      "name": "Event Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        96
+      ],
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "title",
+              "value": "How to Automate Client Onboarding",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "host",
+              "value": "Sam Lee",
+              "type": "string"
+            },
+            {
+              "id": "s3",
+              "name": "startTime",
+              "value": "2026-12-10T16:00:00Z",
+              "type": "string"
+            },
+            {
+              "id": "s4",
+              "name": "durationMinutes",
+              "value": 45,
+              "type": "number"
+            },
+            {
+              "id": "s5",
+              "name": "joinLink",
+              "value": "https://meet.example.com/your-room",
+              "type": "string"
+            },
+            {
+              "id": "s6",
+              "name": "replayLink",
+              "value": "https://example.com/replay",
+              "type": "string"
+            },
+            {
+              "id": "s7",
+              "name": "offerLink",
+              "value": "https://example.com/book-a-call",
+              "type": "string"
+            },
+            {
+              "id": "s8",
+              "name": "calendarId",
+              "value": "primary",
+              "type": "string"
+            },
+            {
+              "id": "s9",
+              "name": "firstName",
+              "value": "={{ $json.firstName }}",
+              "type": "string"
+            },
+            {
+              "id": "s10",
+              "name": "email",
+              "value": "={{ $json.email.trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "s11",
+              "name": "company",
+              "value": "={{ $json.company }}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "816b3335-4d4c-4f9f-b7e2-1e1201bc6138",
+      "name": "Send Calendar Invite",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.4,
+      "position": [
+        448,
+        96
+      ],
+      "parameters": {
+        "resource": "event",
+        "operation": "create",
+        "calendar": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.calendarId }}"
+        },
+        "start": "={{ $json.startTime }}",
+        "end": "={{ DateTime.fromISO($json.startTime).plus({ minutes: $json.durationMinutes }).toISO() }}",
+        "useDefaultReminders": true,
+        "additionalFields": {
+          "summary": "={{ $json.title }}",
+          "description": "=Join here: {{ $json.joinLink }}",
+          "location": "={{ $json.joinLink }}",
+          "attendees": [
+            "={{ $json.email }}"
+          ],
+          "sendUpdates": "all",
+          "guestsCanSeeOtherGuests": false
+        }
+      },
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Calendar"
+        }
+      }
+    },
+    {
+      "id": "e10cbd87-67ae-4bb4-8c86-6d5141ef0476",
+      "name": "Email Confirmation",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        96
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Event Settings').first().json.email }}",
+        "subject": "=You're in: {{ $('Event Settings').first().json.title }}",
+        "emailType": "text",
+        "message": "=Hi {{ $('Event Settings').first().json.firstName }},\n\nYou're registered for {{ $('Event Settings').first().json.title }} with {{ $('Event Settings').first().json.host }} on {{ DateTime.fromISO($('Event Settings').first().json.startTime).toFormat('cccc d LLLL, h:mm a ZZZZ') }}.\n\nJoin link: {{ $('Event Settings').first().json.joinLink }}\nA calendar invite is in your inbox too.\n\nSee you there",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "b93f2bcf-71d5-4104-bf3e-973c95b2c2d3"
+    },
+    {
+      "id": "fb53192b-9b99-4717-a5ef-2134b5577072",
+      "name": "Log Registrant",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        896,
+        96
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "registeredAt": "={{ $now.toISO() }}",
+            "firstName": "={{ $('Event Settings').first().json.firstName }}",
+            "email": "={{ $('Event Settings').first().json.email }}",
+            "company": "={{ $('Event Settings').first().json.company }}",
+            "attended": ""
+          },
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "id": "644f5101-dc09-47a1-91a8-5b855c9af77b",
+      "name": "Wait Until Day Before",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        96
+      ],
+      "parameters": {
+        "resume": "specificTime",
+        "dateTime": "={{ DateTime.fromISO($('Event Settings').first().json.startTime).minus({ hours: 24 }).toISO() }}"
+      },
+      "webhookId": "1f45176f-5cbf-49a9-aba6-7a607d64336e"
+    },
+    {
+      "id": "059cf48f-dfdf-4c60-a5e7-06efb7581fa0",
+      "name": "Email 24h Reminder",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        96
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Event Settings').first().json.email }}",
+        "subject": "=Tomorrow: {{ $('Event Settings').first().json.title }}",
+        "emailType": "text",
+        "message": "=Hi {{ $('Event Settings').first().json.firstName }},\n\nQuick reminder: {{ $('Event Settings').first().json.title }} is tomorrow. Bring a question and we'll answer it live.\n\nJoin link: {{ $('Event Settings').first().json.joinLink }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "df516a70-46e5-482b-b9ca-76c13fbd716c"
+    },
+    {
+      "id": "2a823273-ce07-49a7-992b-b4239f3029c2",
+      "name": "Wait Until 1h Before",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1568,
+        96
+      ],
+      "parameters": {
+        "resume": "specificTime",
+        "dateTime": "={{ DateTime.fromISO($('Event Settings').first().json.startTime).minus({ hours: 1 }).toISO() }}"
+      },
+      "webhookId": "6d37f734-4a1f-478c-8e2c-c1492e2461a3"
+    },
+    {
+      "id": "c14f81a6-32e1-4134-9061-fce29a62f315",
+      "name": "Email 1h Reminder",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1792,
+        96
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Event Settings').first().json.email }}",
+        "subject": "=Starting in 1 hour: {{ $('Event Settings').first().json.title }}",
+        "emailType": "text",
+        "message": "=Hi {{ $('Event Settings').first().json.firstName }}, we go live in an hour. Join here: {{ $('Event Settings').first().json.joinLink }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "bb4d6855-4d2a-4aa9-bb63-b73cdcb99084"
+    },
+    {
+      "id": "aeaeb8c8-9453-498f-ae60-bfc79383abcf",
+      "name": "Wait Until After Event",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2016,
+        96
+      ],
+      "parameters": {
+        "resume": "specificTime",
+        "dateTime": "={{ DateTime.fromISO($('Event Settings').first().json.startTime).plus({ minutes: $('Event Settings').first().json.durationMinutes + 120 }).toISO() }}"
+      },
+      "webhookId": "ecc00772-ebc0-4f00-addb-5a6dd4df1f30"
+    },
+    {
+      "id": "c15e1b68-72de-48a6-87f3-e56685097b07",
+      "name": "Check Attendance",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2240,
+        96
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "read",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email",
+              "lookupValue": "={{ $('Event Settings').first().json.email }}"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "7bea2241-586b-4d28-86de-532f17d0a101",
+      "name": "Attended?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2464,
+        96
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ String($json.attended || '').toLowerCase() === 'yes' }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "d25431ca-8811-42ef-9d6e-ebdb0de79401",
+      "name": "Email Offer to Attendees",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2688,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Event Settings').first().json.email }}",
+        "subject": "=Thanks for joining, {{ $('Event Settings').first().json.firstName }}",
+        "emailType": "text",
+        "message": "=Hi {{ $('Event Settings').first().json.firstName }},\n\nThanks for coming to {{ $('Event Settings').first().json.title }}. Here is the replay in case you want to re-watch a part: {{ $('Event Settings').first().json.replayLink }}\n\nIf you'd like help setting this up for your business, grab a free 20-minute call: {{ $('Event Settings').first().json.offerLink }}\n\n{{ $('Event Settings').first().json.host }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "90b12c75-74b7-46ee-b163-c5ea6cb29516"
+    },
+    {
+      "id": "ae3652c9-e2b7-4578-b58f-db85f5084a6b",
+      "name": "Email Replay to No-Shows",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2688,
+        192
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Event Settings').first().json.email }}",
+        "subject": "=Sorry we missed you: here's the replay",
+        "emailType": "text",
+        "message": "=Hi {{ $('Event Settings').first().json.firstName }},\n\nWe missed you at {{ $('Event Settings').first().json.title }}, but here is the full replay: {{ $('Event Settings').first().json.replayLink }}\n\nQuestions after watching? Book a quick call: {{ $('Event Settings').first().json.offerLink }}\n\n{{ $('Event Settings').first().json.host }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "ceefbc89-1282-48fe-b681-43394943a292"
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "a3d727ac-97ea-455c-8727-ad0587d1840c",
+  "nodeGroups": [],
+  "connections": {
+    "Registration Form": {
+      "main": [
+        [
+          {
+            "node": "Event Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Event Settings": {
+      "main": [
+        [
+          {
+            "node": "Send Calendar Invite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Calendar Invite": {
+      "main": [
+        [
+          {
+            "node": "Email Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Confirmation": {
+      "main": [
+        [
+          {
+            "node": "Log Registrant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Registrant": {
+      "main": [
+        [
+          {
+            "node": "Wait Until Day Before",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Until Day Before": {
+      "main": [
+        [
+          {
+            "node": "Email 24h Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email 24h Reminder": {
+      "main": [
+        [
+          {
+            "node": "Wait Until 1h Before",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Until 1h Before": {
+      "main": [
+        [
+          {
+            "node": "Email 1h Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email 1h Reminder": {
+      "main": [
+        [
+          {
+            "node": "Wait Until After Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Until After Event": {
+      "main": [
+        [
+          {
+            "node": "Check Attendance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Attendance": {
+      "main": [
+        [
+          {
+            "node": "Attended?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attended?": {
+      "main": [
+        [
+          {
+            "node": "Email Offer to Attendees",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Replay to No-Shows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

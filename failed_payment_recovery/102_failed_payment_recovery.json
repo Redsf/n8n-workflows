@@ -1,0 +1,498 @@
+{
+  "id": "xHnP352XwaYUSziu",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "name": "Failed Payment Recovery",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "e9352532-2c4f-4954-91e2-9d11b5e3ad94",
+      "name": "Stripe Payment Failed",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        96
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "stripe-payment-failed",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "d49e9d88-3384-478f-8e95-5e74c509751b"
+    },
+    {
+      "id": "e2312fe1-d95a-4803-b278-8a4e52ec82fb",
+      "name": "Read Stripe Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        96
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Stripe sends invoice.payment_failed on every retry. Only the first attempt starts a recovery sequence.\nconst e = $input.first().json.body || {};\nconst inv = e.data?.object || {};\nif (e.type !== 'invoice.payment_failed' || inv.attempt_count !== 1 || !inv.customer_email) return [];\nreturn [{ json: { invoiceId: inv.id, email: inv.customer_email, name: inv.customer_name || '', firstName: (inv.customer_name || 'there').split(' ')[0],\n  phone: inv.customer_phone || '', amount: (inv.amount_due / 100).toFixed(2), currency: String(inv.currency || 'usd').toUpperCase(),\n  payLink: inv.hosted_invoice_url, businessName: 'Your Company', smsFromNumber: '+15550000000' } }];"
+      }
+    },
+    {
+      "id": "9b31d456-e57a-454c-8dc7-e4d08ba5fac5",
+      "name": "Email Card Update Link",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        96
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Your payment didn't go through",
+        "emailType": "text",
+        "message": "=Hi {{ $json.firstName }},\n\nYour latest payment of {{ $json.amount }} {{ $json.currency }} to {{ $json.businessName }} was declined. This usually means an expired card or a bank check.\n\nYou can update your card and pay here in under a minute:\n{{ $json.payLink }}\n\nThanks,\n{{ $json.businessName }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "66f9f480-929d-4ac1-87f9-822793a8a8f7"
+    },
+    {
+      "id": "8cd1f365-fe18-42b3-be0c-facb2ed5027a",
+      "name": "Text Card Update Link",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        672,
+        96
+      ],
+      "parameters": {
+        "resource": "sms",
+        "operation": "send",
+        "from": "={{ $('Read Stripe Event').item.json.smsFromNumber }}",
+        "to": "={{ $('Read Stripe Event').item.json.phone }}",
+        "message": "=Hi {{ $('Read Stripe Event').item.json.firstName }}, your {{ $('Read Stripe Event').item.json.businessName }} payment of {{ $('Read Stripe Event').item.json.amount }} didn't go through. Update your card here: {{ $('Read Stripe Event').item.json.payLink }} Reply STOP to opt out.",
+        "toWhatsapp": false,
+        "options": {}
+      },
+      "credentials": {
+        "twilioApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Twilio"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "9c20c486-b846-43e0-9bb8-a33aca152c67",
+      "name": "Wait 3 Days",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        96
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 3,
+        "unit": "days"
+      },
+      "webhookId": "9a0c1392-e0f9-414d-b8cb-ee5cd7d32290"
+    },
+    {
+      "id": "16af7bca-42fd-4f84-ac0c-507336095ffb",
+      "name": "Check Invoice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        96
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.stripe.com/v1/invoices/{{ $('Read Stripe Event').item.json.invoiceId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "stripeApi",
+        "options": {}
+      },
+      "credentials": {
+        "stripeApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Stripe"
+        }
+      }
+    },
+    {
+      "id": "82e1c79b-478d-4961-b529-02787a1d2bdd",
+      "name": "Still Unpaid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        96
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.status !== 'paid' && $json.status !== 'void' }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "ea046b12-c681-4469-bcc2-3ad8fc573883",
+      "name": "Email Second Reminder",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1568,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $('Read Stripe Event').item.json.email }}",
+        "subject": "=Action needed: update your payment details",
+        "emailType": "text",
+        "message": "=Hi {{ $('Read Stripe Event').item.json.firstName }},\n\nWe still couldn't collect {{ $('Read Stripe Event').item.json.amount }} {{ $('Read Stripe Event').item.json.currency }}. To keep your account active, please update your card here:\n{{ $('Read Stripe Event').item.json.payLink }}\n\nIf something has changed, just reply and we'll help.\n\n{{ $('Read Stripe Event').item.json.businessName }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      },
+      "webhookId": "6a4981d3-ec55-4f72-894d-f611c376d20f"
+    },
+    {
+      "id": "1b270228-dd4d-4512-bac1-4f33a189cf71",
+      "name": "Wait 4 Days",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1792,
+        0
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 4,
+        "unit": "days"
+      },
+      "webhookId": "63e11fa1-a00d-49b7-b577-ff8f1d82812d"
+    },
+    {
+      "id": "f733ff56-ef96-40c1-a660-262541ee5345",
+      "name": "Check Invoice Again",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2016,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.stripe.com/v1/invoices/{{ $('Read Stripe Event').item.json.invoiceId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "stripeApi",
+        "options": {}
+      },
+      "credentials": {
+        "stripeApi": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Stripe"
+        }
+      }
+    },
+    {
+      "id": "23160d58-2b87-48a7-bcee-d55bbbec363b",
+      "name": "Unpaid After 7 Days?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2240,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.status !== 'paid' && $json.status !== 'void' }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "rightValue": ""
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "1896c14b-a7f2-4820-8ff6-ef90f5834ee8",
+      "name": "Alert Owner",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        2464,
+        0
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "billing"
+        },
+        "messageType": "text",
+        "text": "=:credit_card: *Payment still failing after 7 days:* {{ $('Read Stripe Event').item.json.name }} ({{ $('Read Stripe Event').item.json.email }}), {{ $('Read Stripe Event').item.json.amount }} {{ $('Read Stripe Event').item.json.currency }}. Invoice {{ $('Read Stripe Event').item.json.invoiceId }}. Time for a personal call.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Slack account"
+        }
+      },
+      "webhookId": "bb3fb9d0-a340-43f2-ba49-506f36ccc00c"
+    },
+    {
+      "id": "7ff6da59-f10c-4f0b-a3ab-5033a9f3e01e",
+      "name": "Log Recovery Outcome",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2688,
+        192
+      ],
+      "parameters": {
+        "resource": "sheet",
+        "operation": "append",
+        "authentication": "oAuth2",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "loggedAt": "={{ $now.toISO() }}",
+            "invoiceId": "={{ $('Read Stripe Event').item.json.invoiceId }}",
+            "email": "={{ $('Read Stripe Event').item.json.email }}",
+            "amount": "={{ $('Read Stripe Event').item.json.amount }}",
+            "outcome": "={{ $('Alert Owner').isExecuted ? 'escalated' : 'recovered' }}"
+          },
+          "schema": []
+        },
+        "options": {}
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "active": false,
+  "pinData": {},
+  "settings": {
+    "binaryMode": "separate",
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "errorWorkflow": "REPLACE_WITH_ERROR_WORKFLOW_ID"
+  },
+  "versionId": "029bb1b0-bc68-4d81-94b5-57d422554c67",
+  "nodeGroups": [],
+  "connections": {
+    "Stripe Payment Failed": {
+      "main": [
+        [
+          {
+            "node": "Read Stripe Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Stripe Event": {
+      "main": [
+        [
+          {
+            "node": "Email Card Update Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Card Update Link": {
+      "main": [
+        [
+          {
+            "node": "Text Card Update Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Card Update Link": {
+      "main": [
+        [
+          {
+            "node": "Wait 3 Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 3 Days": {
+      "main": [
+        [
+          {
+            "node": "Check Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Invoice": {
+      "main": [
+        [
+          {
+            "node": "Still Unpaid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Still Unpaid?": {
+      "main": [
+        [
+          {
+            "node": "Email Second Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Recovery Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Second Reminder": {
+      "main": [
+        [
+          {
+            "node": "Wait 4 Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 4 Days": {
+      "main": [
+        [
+          {
+            "node": "Check Invoice Again",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Invoice Again": {
+      "main": [
+        [
+          {
+            "node": "Unpaid After 7 Days?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unpaid After 7 Days?": {
+      "main": [
+        [
+          {
+            "node": "Alert Owner",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Recovery Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Owner": {
+      "main": [
+        [
+          {
+            "node": "Log Recovery Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
